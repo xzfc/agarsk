@@ -55,7 +55,7 @@ struct Cell : Item {
     return type == Type::PELLET ? getAabb() : getAabb().expand(3);
   }
   
-  void svg(Svg &s) const override {
+  virtual void svg(Svg &s) const {
     s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)");
   }
 

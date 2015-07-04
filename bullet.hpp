@@ -84,7 +84,6 @@ struct Aabb {
   { return {(x0+x1)/2, (y0+y1)/2}; }
 };
 
-struct Svg;
 struct Node;
 struct Broadphase;
 
@@ -92,8 +91,6 @@ struct Item {
   virtual Aabb getAabb() const = 0;
   virtual Aabb getPotentialAabb() const
   { return getAabb(); }
-  virtual void svg(Svg &) const
-  { }
  private:
   Node *node;
   friend struct Node;
@@ -107,7 +104,6 @@ struct Broadphase {
   //! Return container of pairs of colliding items. Pairs are unordered.
   //! \warning Result may be invalidated by subsequent method calling.
   const std::vector<std::pair<Item*, Item*>>& getCollisions();
-  void svg(const char *) /*const*/;
  private:
   Node *root;
   std::vector<std::pair<Item*, Item*>> pairs;

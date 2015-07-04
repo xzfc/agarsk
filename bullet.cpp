@@ -1,5 +1,4 @@
 #include "bullet.hpp"
-#include "svg.hpp"
 
 #include <iostream>
 
@@ -16,7 +15,6 @@ struct Node {
   Node *getSibling() const;
   void updateAabb();
   template <class F> void iterate(const F &f);
-  int svg(Svg &, int lvl=0) const;
 };
 
 Node::Node(Item *item) {
@@ -57,20 +55,6 @@ template <class F> void Node::iterate(const F &f) {
   }
 }
 
-int Node::svg(Svg &svg, int lvl) const {
-  if (isLeaf()) {
-    item->svg(svg);
-    svg.rectangle(aabb, "rgba(0,0,0,0.5)", "none");
-    return 0;
-  } else {
-    int l = std::max(child[0]->svg(svg,lvl+1), child[1]->svg(svg,lvl+1));
-    //svg.rectangle(aabb.expand(l*0.3), "rgba(0,127,0,1)", "none");
-    //svg.line(aabb.center(), child[0]->aabb.center(), "black");
-    //svg.line(aabb.center(), child[1]->aabb.center(), "black");
-    return l+1;
-  }
-}
-
 //
 // Broadphase public methods
 //
@@ -96,16 +80,6 @@ const std::vector<std::pair<Item*, Item*>>& Broadphase::getCollisions() {
   updateTree();
   calcPairs();
   return pairs;
-}
-
-void Broadphase::svg(const char *fname) {
-  Svg svg(fname, {-100,-100,500,500}, 512, 512);
-  if (root)
-    root->svg(svg);
-  calcPairs();
-  for (auto p : pairs)
-    svg.line(p.first->getAabb().center(),
-             p.second->getAabb().center(), "black");
 }
 
 //
