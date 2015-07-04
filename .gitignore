@@ -1,5 +1,6 @@
 *.o
 main
+ws
 bulletTester
 *.svg
 ext

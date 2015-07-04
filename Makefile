@@ -5,7 +5,6 @@ CFLAGS := -O3 -g -Iext/include
 LDFLAGS := -Lext/lib -lwebsockets
 
 main: bullet.o main.o
-bulletTester: bulletTester.o bullet.o
 ws: ws.o
 
 run: main
@@ -13,9 +12,10 @@ run: main
 	mkdir out
 	./main
 
-bullet.o: bullet.cpp bullet.hpp svg.hpp
+bullet.o: bullet.cpp bullet.hpp
 bulletTester.o: bulletTester.cpp bullet.hpp svg.hpp
 main.o: main.cpp bullet.hpp svg.hpp
+ws.o: ws.cpp ws.hpp
 
 clean:
 	rm -rf main bulletTester *.o *.svg out
