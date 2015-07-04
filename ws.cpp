@@ -2,6 +2,7 @@
 
 #include <libwebsockets.h>
 
+#include <iostream>
 #include <cstring>
 #include <cstdlib>
 
@@ -25,15 +26,30 @@ static int callback_normal(struct libwebsocket_context *,
                            struct libwebsocket *ws,
                            enum libwebsocket_callback_reasons reason, void *user_,
                            void *in_, size_t len) {
+  if(reason == 30) return 0;
+  std::cout << "Callback!" << reason << "\n";
   WsClientData *user = static_cast<WsClientData *>(user_);
   uint8_t *in = static_cast<uint8_t*>(in_);
   switch (reason) {
     case LWS_CALLBACK_ESTABLISHED: {
+      std::cout << "Connected!\n";
       new (user_) WsClientData;
       user->ws = ws;
       break;
     }
     case LWS_CALLBACK_RECEIVE: {
+      std::cout << "Receive:";
+      for (size_t i = 0; i < len; i++)
+        std::cout << ' ' << (int)in[i];
+      std::cout << " | ";
+      for (size_t i = 0; i < len; i++)
+        if ( ((char)in[i]) >= ' ' && ((char)in[i]) <= '~')
+          std::cout << (char)in[i];
+        else
+          std::cout << '?';
+      std::cout << "\n";
+      
+      break; 
       if (user->hello) {
         
       } else {
@@ -57,22 +73,8 @@ static int callback_normal(struct libwebsocket_context *,
 }
 
 static struct libwebsocket_protocols protocols[] = {
-  { "http-only", callback_http,   0, 0, },
-  { "",          callback_normal, sizeof (WsClientData), 0, },
-        /*
-	{
-		"dumb-increment-protocol",
-		callback_dumb_increment,
-		sizeof(struct per_session_data__dumb_increment),
-		10,
-	},
-	{
-		"lws-mirror-protocol",
-		callback_lws_mirror,
-		sizeof(struct per_session_data__lws_mirror),
-		128,
-        },
-        */
+  // { "http-only", callback_http,   0, 0, },
+  { "nope",          callback_normal, sizeof (WsClientData), 1024*1024, },
   { NULL, NULL, 0, 0 }
 };
 
@@ -99,5 +101,8 @@ WsServer::~WsServer() {
 }
 
 int main() {
-  
+  WsServer w(8000);
+  while (1) {
+    libwebsocket_service(w.context, 50);
+  }
 }
