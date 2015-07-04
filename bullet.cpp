@@ -88,6 +88,7 @@ void Broadphase::add(Item *item) {
 
 void Broadphase::remove(Item *item) {
   removeNode(item->node);
+  delete item->node;
   item->node = nullptr;
 }
 
