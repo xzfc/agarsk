@@ -1,10 +1,11 @@
 #include "bullet.hpp"
+#include "svg.hpp"
 
 #include <iostream>
 #include <cstdlib>
 #include <set>
 
-struct Circle;
+struct Cell;
 
 struct Player {
   struct Input {};
@@ -15,11 +16,11 @@ struct Player {
 
   bool joined = false;
 
-  std::vector<Circle*> circles;
+  std::vector<Cell*> cells;
   std::string name;
 };
 
-struct Circle : Item {
+struct Cell : Item {
   double r;
   Vec2 pos, velocity;
 
@@ -28,10 +29,16 @@ struct Circle : Item {
 
   bool eaten = false;
   
-  Circle(Vec2 pos, double r) : pos(pos), r(r) {
+  Cell(Vec2 pos, double r) : pos(pos), r(r) {
   }
   Aabb getAabb() const override {
     return {pos.x-r, pos.y-r, pos.x+r, pos.y+r};
+  }
+  Aabb getPotentialAabb() const override {
+    if (type == Type::PELLET)
+      return getAabb();
+    else
+      return getAabb().expand(3);
   }
   void svg(Svg &s) const override {
     s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)");
@@ -47,14 +54,14 @@ struct Game {
   Broadphase b;
 
   std::vector<Player*> players;
-  std::set<Circle*> circles;
+  std::set<Cell*> cells;
 
   void addPellets(int count) {
     for (int i = 0; i < count; i++) {
-      auto circle = new Circle({drand48()*1000, drand48()*1000}, 1);
-      circle->type = Circle::Type::PELLET;
-      circles.insert(circle);
-      b.add(circle);
+      auto cell = new Cell({drand48()*1000, drand48()*1000}, 1);
+      cell->type = Cell::Type::PELLET;
+      cells.insert(cell);
+      b.add(cell);
     }
   }
 
@@ -62,20 +69,20 @@ struct Game {
     if (player->joined) return;
     player->joined = true;
 
-    auto circle = new Circle({drand48()*1000, drand48()*1000}, 50);
-    circle->type = Circle::Type::PLAYER;
-    circle->player = player;
+    auto cell = new Cell({drand48()*1000, drand48()*1000}, 50);
+    cell->type = Cell::Type::PLAYER;
+    cell->player = player;
 
-    player->circles.push_back(circle);
-    circles.insert(circle);
+    player->cells.push_back(cell);
+    cells.insert(cell);
     players.push_back(player);
-    b.add(circle);
+    b.add(cell);
   }
 
   void step() {
     //std::cout << "r =";
     for (auto p : players) {
-      for (auto c : p->circles) {
+      for (auto c : p->cells) {
         //std::cout << " " << c->r;
         c->velocity = (p->target - c->pos).normalize() * 0.5;
       }
@@ -83,26 +90,26 @@ struct Game {
       p->split = false; // TODO
     }
     //std::cout << "\n";
-    for (auto c : circles) {
+    for (auto c : cells) {
       if (c->velocity == Vec2 {0,0}) continue;
       c->pos += c->velocity;
       c->velocity = c->velocity.shorten(0.01);
     }
-    b.update();
-    b.calcPairs();
-    for (auto p : b.pairs)
-      woof(*static_cast<Circle*>(p.first), *static_cast<Circle*>(p.second));
-    //for (auto fst : circles)
-    //  for (auto snd : circles)
-    //    woof(*fst, *snd);
-    b.update();
+    for (auto p : b.getCollisions()) {
+      auto &fst = *static_cast<Cell*>(p.first),
+           &snd = *static_cast<Cell*>(p.second);
+      if (fst.r > snd.r)
+        woof(fst, snd);
+      else
+        woof(snd, fst);
+    }
 
-    std::set<Circle*> eaten;
-    for (auto c: circles) {
+    std::set<Cell*> eaten;
+    for (auto c: cells) {
       if (c->eaten) {
         b.remove(c);
-        if (c->player) {
-          auto & vec = c->player->circles;
+        if (c->type == Cell::Type::PLAYER) {
+          auto & vec = c->player->cells;
           vec.erase(std::remove(vec.begin(), vec.end(), c), vec.end());
         }
         delete c;
@@ -110,11 +117,11 @@ struct Game {
       }
     }
     for (auto c: eaten)
-      circles.erase(c);
+      cells.erase(c);
   }
 
-  void woof(Circle &fst, Circle &snd) {
-    bool actionEat = false;
+  void woof(Cell &fst, Cell &snd) {
+    bool actionEat = true;
     bool actionCollide = false;
     bool actionExplode = false;
     
@@ -123,33 +130,32 @@ struct Game {
     bool canEatD = dist2 <= sqr(fst.getEatingRange() + snd.r*0);
     bool canEatR = fst.r >= 1.25*snd.r || true;
     
-    if (fst.type == Circle::Type::PLAYER) {
-      if (snd.type == Circle::Type::PLAYER && fst.player == snd.player) {
+    if (fst.type == Cell::Type::PLAYER) {
+      if (snd.type == Cell::Type::PLAYER && fst.player == snd.player) {
         bool canMerge = false; // TODO
         if (!canMerge && canCollide)
           actionCollide = true;
         else if (canMerge && canEatD)
           actionEat = true;
-      } else if (snd.type == Circle::Type::PELLET && canCollide) {
-        std::cout << "E\n";
+      } else if (snd.type == Cell::Type::PELLET && canCollide) {
         actionEat = true;
-      } else if (snd.type == Circle::Type::PLAYER && canEatD && canEatR) { // ???
+      } else if (snd.type == Cell::Type::PLAYER && canEatD && canEatR) { // ???
         //std::cout << "Eat: " << dist2 << " " <<  sqr(fst.getEatingRange() + snd.r) << "\n";
         //std::cout << "     " << fst.r << " " << fst.getEatingRange() << " " << snd.r << "\n";
         actionEat = true;
-        if (snd.type == Circle::Type::VIRUS)
+        if (snd.type == Cell::Type::VIRUS)
           actionExplode = true;
       }
-    } else if (fst.type == Circle::Type::VIRUS &&
-               snd.type == Circle::Type::FOOD &&
+    } else if (fst.type == Cell::Type::VIRUS &&
+               snd.type == Cell::Type::FOOD &&
                canEatD) {
       actionEat = true;
       // TODO: split virus
     }
 
     if (actionEat && !fst.eaten && !snd.eaten) {
-      fst.r += snd.r;
-      snd.eaten = true;
+      //fst.r += snd.r;
+      //snd.eaten = true;
     }
 
     if (actionCollide) {
@@ -173,16 +179,16 @@ int main() {
   Player players[3];
   for (auto &p : players)
     game.joinPlayer(&p);
-  //players[0].circles[0]->pos = {0,0};
-  //players[1].circles[0]->pos = {100,0};
+  //players[0].cells[0]->pos = {0,0};
+  //players[1].cells[0]->pos = {100,0};
   players[0].target = {100, 0};
 
-  game.addPellets(2000);
+  game.addPellets(20000);
   char fname[32];
   
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 100; i++) {
     sprintf(fname, "out/%04d.svg", i);
-    if(i % 1 == 0) game.svg(fname);
+    if(i % 100 == 0) game.svg(fname);
     
     game.step();
   }

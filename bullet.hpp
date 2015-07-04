@@ -46,6 +46,7 @@ struct Vec2 {
   double length() const
   { return std::sqrt(x*x+y*y); }
 
+  //! Squared length
   double length2() const
   { return x*x+y*y; }
 
@@ -57,23 +58,21 @@ struct Vec2 {
     return (len > s) ? Vec2{0,0} : (*this - *this*(s/len)); }
 };
 
-inline Vec2 operator+(const Vec2 &a, const Vec2 &b) {
-  return {a.x+b.x, a.y+b.y};
-}
-
 struct Aabb {
   double x0, y0, x1, y1;
 
   Aabb expand(float m) const
-  { return Aabb{x0-m,y0-m,x1+m,y1+m}; }
+  { return Aabb{x0-m, y0-m, x1+m, y1+m}; }
 
+  //! Union: `a | b` is minimal Aabb that contains both `a` and `b`
   Aabb operator|(const Aabb &o) const
   { return {std::min(x0, o.x0), std::min(y0, o.y0),
           std::max(x1, o.x1), std::max(y1, o.y1)}; }
 
-  bool collides(const Aabb &o) const
-  { return std::max(x0, o.x0) < std::min(x1, o.x1) &&
-                                std::max(y0, o.y0) < std::min(y1, o.y1) || this->contains(o); }
+  //! Check intersection: `a && b` is true if `a` and `b` have common points
+  bool operator&&(const Aabb &o) const
+  { return std::max(x0, o.x0) <= std::min(x1, o.x1) &&
+        std::max(y0, o.y0) <= std::min(y1, o.y1); }
 
   bool contains(const Aabb &o) const
   { return x0<=o.x0 && y0<=o.y0 && x1>=o.x1 && y1>=o.y1; }
@@ -85,54 +84,36 @@ struct Aabb {
   { return {(x0+x1)/2, (y0+y1)/2}; }
 };
 
-#include "svg.hpp"
+struct Svg;
 struct Node;
+struct Broadphase;
 
 struct Item {
   virtual Aabb getAabb() const = 0;
+  virtual Aabb getPotentialAabb() const = 0;
   virtual void svg(Svg &) const = 0;
+ private:
   Node *node;
+  friend struct Node;
+  friend struct Broadphase;
 };
 
 struct Broadphase {
+  Broadphase();
   void add(Item *c);
   void remove(Item *c);
-  void update();
-  void svg(const char *) const;
-
-  Node *root = 0;
-  double margin = 10;
-
-  std::vector<Node*> invalidNodes;
-  void grabInvalidNodes(Node *node);
-
+  //! Return container of pairs of colliding items. Pairs are unordered.
+  //! \warning Result may be invalidated by subsequent method calling.
+  const std::vector<std::pair<Item*, Item*>>& getCollisions();
+  void svg(const char *) /*const*/;
+ private:
+  Node *root;
   std::vector<std::pair<Item*, Item*>> pairs;
+  std::vector<Node*> invalidNodes;
+
+  void updateTree();
   void calcPairs();
-  void crossChildren(Node *node);
-  void calcPairsHelper(Node *n0, Node *n1);
 
   void addNode(Node *, Node *&);
   void removeNode(Node *);
-};
-
-struct Node {
-  Node *parent;
-  Node *child[2];
-
-  Aabb aabb;
-  Item *item;
-
-  Node();
-  bool isLeaf() const;
-  void setBranch(Node*, Node*);
-  void setLeaf(Item *item);
-  void updateAabb(float margin);
-  Node *getSibling() const;
-
-  bool childCrossed = false;
-  void cleanChildCrossed();
-
-  int svg(Svg &, int lvl=0) const;
-
-  void sanityCheck();
 };

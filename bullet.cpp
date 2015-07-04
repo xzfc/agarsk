@@ -1,44 +1,59 @@
 #include "bullet.hpp"
+#include "svg.hpp"
 
 #include <iostream>
 
-Node::Node() {
+struct Node {
+  Node *parent;
+  Node *child[2];
+  Aabb aabb;
+  Item *item;
+  bool childCrossed = false;
+
+  Node(Item *); // leaf node
+  Node(Node *parent, Node*, Node*); // branch node
+  bool isLeaf() const;
+  Node *getSibling() const;
+  void updateAabb();
+  template <class F> void iterate(const F &f);
+  int svg(Svg &, int lvl=0) const;
+};
+
+Node::Node(Item *item) {
+  this->item = item;
+  item->node = this;
   parent = child[0] = child[1] = nullptr;
+  updateAabb();
+}
+
+Node::Node(Node *parent, Node *n0, Node *n1) {
+  this->parent = parent;
+  n0->parent = n1->parent = this;
+  child[0] = n0;
+  child[1] = n1;
   item = nullptr;
+  updateAabb();
 }
 
 bool Node::isLeaf() const {
   return !child[0];
 }
 
-void Node::setBranch(Node *n0, Node *n1) {
-  n0->parent = n1->parent = this;
-  child[0] = n0;
-  child[1] = n1;
-  item = nullptr; // is ok?
-}
-
-void Node::setLeaf(Item *item) {
-  this->item = item;
-  item->node = this;
-  child[0] = child[1] = nullptr;
-}
-
-void Node::updateAabb(float margin) {
-  aabb = isLeaf() ?
-         item->getAabb().expand(margin) :
-         child[0]->aabb | child[1]->aabb;
-}
-
 Node *Node::getSibling() const {
   return parent->child[this == parent->child[0]];
 }
 
-void Node::cleanChildCrossed() {
-  childCrossed = false;
+void Node::updateAabb() {
+  aabb = isLeaf() ?
+         item->getPotentialAabb() :
+         child[0]->aabb | child[1]->aabb;
+}
+
+template <class F> void Node::iterate(const F &f) {
+  f(this);
   if (!isLeaf()) {
-    child[0]->cleanChildCrossed();
-    child[1]->cleanChildCrossed();
+    child[0]->iterate(f);
+    child[1]->iterate(f);
   }
 }
 
@@ -49,33 +64,26 @@ int Node::svg(Svg &svg, int lvl) const {
     return 0;
   } else {
     int l = std::max(child[0]->svg(svg,lvl+1), child[1]->svg(svg,lvl+1));
-    svg.rectangle(aabb.expand(l*0.3), "rgba(0,127,0,1)", "none");
-    svg.line(aabb.center(), child[0]->aabb.center(), "black");
-    svg.line(aabb.center(), child[1]->aabb.center(), "black");
+    //svg.rectangle(aabb.expand(l*0.3), "rgba(0,127,0,1)", "none");
+    //svg.line(aabb.center(), child[0]->aabb.center(), "black");
+    //svg.line(aabb.center(), child[1]->aabb.center(), "black");
     return l+1;
   }
 }
 
-void Node::sanityCheck() {
-  if (isLeaf()) return;
-  if (child[0]->parent != this) std::cout << ":<\n";
-  if (child[1]->parent != this) std::cout << ":<\n";
-  child[0]->sanityCheck();
-  child[1]->sanityCheck();
+//
+// Broadphase public methods
+//
+
+Broadphase::Broadphase() : root(nullptr) {
 }
 
-
 void Broadphase::add(Item *item) {
-  if (root) {
-    Node *node = new Node();
-    node->setLeaf(item);
-    node->updateAabb(margin);
+  Node *node = new Node(item);
+  if (root)
     addNode(node, root);
-  } else {
-    root = new Node();
-    root->setLeaf(item);
-    root->updateAabb(margin);
-  }
+  else
+    root = node;
 }
 
 void Broadphase::remove(Item *item) {
@@ -83,87 +91,95 @@ void Broadphase::remove(Item *item) {
   item->node = nullptr;
 }
 
-void Broadphase::update() {
+const std::vector<std::pair<Item*, Item*>>& Broadphase::getCollisions() {
+  updateTree();
+  calcPairs();
+  return pairs;
+}
+
+void Broadphase::svg(const char *fname) {
+  Svg svg(fname, {-100,-100,500,500}, 512, 512);
+  if (root)
+    root->svg(svg);
+  calcPairs();
+  for (auto p : pairs)
+    svg.line(p.first->getAabb().center(),
+             p.second->getAabb().center(), "black");
+}
+
+//
+// Broadphase protected methods
+//
+
+void Broadphase::updateTree() {
   if (!root)
     return;
 
   if (root->isLeaf()) {
-    root->updateAabb(margin);
+    root->updateAabb();
     return;
   }
 
   invalidNodes.clear();
-  grabInvalidNodes(root);
+  root->iterate([this](Node *node) {
+      if (node->isLeaf() && !node->aabb.contains(node->item->getAabb()))
+        this->invalidNodes.push_back(node);
+    });
+  
   for (Node *node : invalidNodes) {
-    node->updateAabb(margin);
+    node->updateAabb();
     removeNode(node);
     addNode(node, root);
   }
 }
 
-void Broadphase::svg(const char *fname) const {
-  
-  Svg svg(fname, {-100,-100,500,500}, 512, 512);
-  if (root)
-    root->svg(svg);
-}
-
-void Broadphase::grabInvalidNodes(Node *node) {
-  if (!node) return;
-  if (node->isLeaf()) {
-    if (!node->aabb.contains(node->item->getAabb()))
-      invalidNodes.push_back(node);
-  } else {
-    grabInvalidNodes(node->child[0]);
-    grabInvalidNodes(node->child[1]);
-  }
-}
-
 void Broadphase::calcPairs() {
   pairs.clear();
+  
   if (!root || root->isLeaf())
     return;
-  root->cleanChildCrossed();
-  crossChildren(root);
-}
-
-void Broadphase::crossChildren(Node *node) {
-  if (node->childCrossed || node->isLeaf()) return;
-  calcPairsHelper(node->child[0], node->child[1]);
-  node->childCrossed = true;
-}
-
-void Broadphase::calcPairsHelper(Node *n0, Node *n1) {
-  crossChildren(n0);
-  crossChildren(n1);
-  if (!n0->aabb.collides(n1->aabb)) return;
-  if (n0->isLeaf()) {
-    if (n1->isLeaf()) {
-      if (n0->item->getAabb().collides(n1->item->getAabb()))
-        pairs.emplace_back(n0->item, n1->item);
-    } else {
-      calcPairsHelper(n0, n1->child[0]);
-      calcPairsHelper(n0, n1->child[1]);
+  
+  root->iterate([](Node *n) { n->childCrossed = false; });
+  
+  struct {
+    Broadphase *b;
+    void one(Node *node) {
+      if (node->childCrossed || node->isLeaf()) return;
+      pair(node->child[0], node->child[1]);
+      node->childCrossed = true;
     }
-  } else {
-    if (n1->isLeaf()) {
-      calcPairsHelper(n1, n0->child[0]);
-      calcPairsHelper(n1, n0->child[1]);
-    } else {
-      for (int i = 0; i < 2; i++)
-        for (int j = 0; j < 2; j++)
-          calcPairsHelper(n0->child[i], n1->child[j]);
+    void pair(Node *n0, Node *n1) {
+      one(n0);
+      one(n1);
+      // TODO: ↑ these two calls can be run in parallel for performance purposes
+      if (!(n0->aabb && n1->aabb)) return;
+      if (n0->isLeaf()) {
+        if (n1->isLeaf()) {
+          if (n0->item->getAabb() && n1->item->getAabb())
+            b->pairs.emplace_back(n0->item, n1->item);
+        } else {
+          pair(n0, n1->child[0]);
+          pair(n0, n1->child[1]);
+        }
+      } else {
+        if (n1->isLeaf()) {
+          pair(n1, n0->child[0]);
+          pair(n1, n0->child[1]);
+        } else {
+          for (int i = 0; i < 2; i++)
+            for (int j = 0; j < 2; j++)
+              pair(n0->child[i], n1->child[j]);
+        }
+      }
     }
-  }
+  } cross {this};
+  
+  cross.one(root);
 }
 
 void Broadphase::addNode(Node *node, Node *&parent) {
   if (parent->isLeaf()) {
-    Node *newParent = new Node();
-    newParent->parent = parent->parent;
-    newParent->setBranch(node, parent);
-    parent = newParent;
-    parent->updateAabb(margin);
+    parent = new Node(parent->parent, node, parent);
     return;
   }
 
@@ -173,7 +189,7 @@ void Broadphase::addNode(Node *node, Node *&parent) {
                     - parent->child[i]->aabb.volume();
 
   addNode(node, parent->child[volumeDiff[0] > volumeDiff[1]]);
-  parent->updateAabb(margin);
+  parent->updateAabb();
 }
 
 void Broadphase::removeNode(Node *node) {

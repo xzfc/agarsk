@@ -24,7 +24,6 @@ struct Svg {
 	}
 
 	void rectangle(Aabb rect, const char *stroke, const char *fill) {
-          return;
 		f << 
 		"  <rect "
 		"x='" << rect.x0 << "' "
@@ -37,7 +36,6 @@ struct Svg {
 	}
 
 	void line(Vec2 from, Vec2 to, const char *stroke) {
-          return;
 		f << 
 		"  <line "
 		"x1='" << from.x << "' "
