@@ -6,6 +6,7 @@
 #include <set>
 
 struct Cell;
+struct PlayerCell;
 
 struct Modifications {
   std::vector<std::pair<Cell*, Cell*>> eaten;
@@ -21,7 +22,7 @@ struct Player {
 
   bool joined = false;
 
-  std::set<Cell*> cells;
+  std::set<PlayerCell*> cells;
   std::string name;
   uint64_t color = 0;
 };
@@ -35,9 +36,8 @@ struct Cell : Item {
   bool eaten = false;
   bool moved = false;
   
-  Cell(Vec2 pos, unsigned mass) : pos(pos) {
-    this->mass(mass);
-  }
+  Cell(Vec2 pos, unsigned mass) : pos(pos)
+  { this->mass(mass); }
 
   unsigned mass()
   { return mass_; }
@@ -55,9 +55,8 @@ struct Cell : Item {
     return type == Type::PELLET ? getAabb() : getAabb().expand(3);
   }
   
-  virtual void svg(Svg &s) const {
-    s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)");
-  }
+  virtual void svg(Svg &s) const
+  { s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)"); }
 
   virtual void step(Modifications &m) {
     if (velocity != Vec2 {0,0}) {
@@ -228,7 +227,8 @@ struct Game {
     cells.clear();
     /*
     for (auto p: players)
-    delete p;*/
+      delete p;
+    */
     players.clear();
   }
 
