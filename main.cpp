@@ -8,15 +8,13 @@
 struct Cell;
 
 struct Player {
-  struct Input {};
-
   Vec2 target;
   bool shoot = false;
   bool split = false;
 
   bool joined = false;
 
-  std::vector<Cell*> cells;
+  std::set<Cell*> cells;
   std::string name;
 };
 
@@ -28,9 +26,11 @@ struct Cell : Item {
   enum class Type { PLAYER, VIRUS, PELLET, FOOD } type;
 
   bool eaten = false;
+  bool moved = false;
   
   Cell(Vec2 pos, double r) : pos(pos), r(r) {
   }
+  virtual ~Cell() {}
   Aabb getAabb() const override {
     return {pos.x-r, pos.y-r, pos.x+r, pos.y+r};
   }
@@ -50,11 +50,32 @@ struct Cell : Item {
   }
 };
 
+struct PlayerCell : Cell {
+  Player *player;
+
+  PlayerCell(Player *p, Vec2 pos, double r) : Cell(pos, r) {
+    player = p;
+    type = Type::PLAYER;
+    player->cells.insert(this);
+  }
+  virtual ~PlayerCell() override {
+    player->cells.erase(this);
+    // todo:check if player have other cells
+  }
+};
+
+struct Food : Cell {
+  Food(Vec2 pos, double r) : Cell(pos, r) {
+    type = Type::FOOD;
+  }
+};
+
 struct Game {
   Broadphase b;
 
   std::vector<Player*> players;
   std::set<Cell*> cells;
+  std::vector<std::pair<Cell*, Cell*>> eaten;
 
   void addPellets(int count) {
     for (int i = 0; i < count; i++) {
@@ -67,60 +88,69 @@ struct Game {
 
   void joinPlayer(Player *player) {
     if (player->joined) return;
+    
     player->joined = true;
 
     auto cell = new Cell({drand48()*1000, drand48()*1000}, 50);
     cell->type = Cell::Type::PLAYER;
     cell->player = player;
 
-    player->cells.push_back(cell);
+    player->cells.insert(cell);
     cells.insert(cell);
     players.push_back(player);
     b.add(cell);
   }
 
+  void removeCell(Cell *c) {
+    b.remove(c);
+    cells.erase(c);
+    delete c;
+  }
+
   void step() {
-    //std::cout << "r =";
     for (auto p : players) {
-      for (auto c : p->cells) {
-        //std::cout << " " << c->r;
+      for (auto c : p->cells)
         c->velocity = (p->target - c->pos).normalize() * 0.5;
-      }
       p->shoot = false; // TODO
       p->split = false; // TODO
     }
-    //std::cout << "\n";
-    for (auto c : cells) {
-      if (c->velocity == Vec2 {0,0}) continue;
-      c->pos += c->velocity;
-      c->velocity = c->velocity.shorten(0.01);
-    }
-    for (auto p : b.getCollisions()) {
-      auto &fst = *static_cast<Cell*>(p.first),
-           &snd = *static_cast<Cell*>(p.second);
-      if (fst.r > snd.r)
-        woof(fst, snd);
-      else
-        woof(snd, fst);
-    }
+    
+    for (auto c : cells)
+      if (c->velocity == Vec2 {0,0}) {
+        c->moved = false;
+      } else {
+        c->pos += c->velocity;
+        c->velocity = c->velocity.shorten(0.01);
+        c->moved = true;
+      }
 
-    std::set<Cell*> eaten;
-    for (auto c: cells) {
-      if (c->eaten) {
-        b.remove(c);
-        if (c->type == Cell::Type::PLAYER) {
-          auto & vec = c->player->cells;
-          vec.erase(std::remove(vec.begin(), vec.end(), c), vec.end());
-        }
-        delete c;
-        eaten.insert(c);
+    eaten.clear();
+    
+    for (auto p : b.getCollisions()) {
+      Cell *fstCell = dynamic_cast<Cell*>(p.first),
+           *sndCell = dynamic_cast<Cell*>(p.second);
+      if (fstCell && sndCell) {
+        if (fstCell->r < sndCell->r)
+          std::swap(fstCell, sndCell);
+        handleInteraction(*fstCell, *sndCell);
       }
     }
-    for (auto c: eaten)
+
+    for (auto p : eaten) {
+      Cell *c = p.second;
+      b.remove(c);
+      if (c->type == Cell::Type::PLAYER) {
+        c->player->cells.erase(c);
+        // todo: check if player have cells
+      }
       cells.erase(c);
+      delete c;
+    }
+
+    // new state in: eaten; cells.filter(c-> c.moved)
   }
 
-  void woof(Cell &fst, Cell &snd) {
+  void handleInteraction(Cell &fst, Cell &snd) {    
     bool actionEat = true;
     bool actionCollide = false;
     bool actionExplode = false;
@@ -155,7 +185,8 @@ struct Game {
 
     if (actionEat && !fst.eaten && !snd.eaten) {
       //fst.r += snd.r;
-      //snd.eaten = true;
+      snd.eaten = true;
+      eaten.push_back({&fst, &snd});
     }
 
     if (actionCollide) {

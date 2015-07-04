@@ -90,8 +90,10 @@ struct Broadphase;
 
 struct Item {
   virtual Aabb getAabb() const = 0;
-  virtual Aabb getPotentialAabb() const = 0;
-  virtual void svg(Svg &) const = 0;
+  virtual Aabb getPotentialAabb() const
+  { return getAabb(); }
+  virtual void svg(Svg &) const
+  { }
  private:
   Node *node;
   friend struct Node;
