@@ -78,6 +78,11 @@ void Broadphase::add(Item *item) {
   }
 }
 
+void Broadphase::remove(Item *item) {
+  removeNode(item->node);
+  item->node = nullptr;
+}
+
 void Broadphase::update() {
   if (!root)
     return;
@@ -90,13 +95,15 @@ void Broadphase::update() {
   invalidNodes.clear();
   grabInvalidNodes(root);
   for (Node *node : invalidNodes) {
+    node->updateAabb(margin);
     removeNode(node);
     addNode(node, root);
   }
 }
 
 void Broadphase::svg(const char *fname) const {
-  Svg svg(fname, {-1000,-1000,1000,1000}, 512, 512);
+  
+  Svg svg(fname, {-100,-100,500,500}, 512, 512);
   if (root)
     root->svg(svg);
 }
@@ -117,39 +124,32 @@ void Broadphase::calcPairs() {
   if (!root || root->isLeaf())
     return;
   root->cleanChildCrossed();
-  calcPairsHelper(root->child[0], root->child[1]);
+  crossChildren(root);
 }
 
 void Broadphase::crossChildren(Node *node) {
-  if (node->childCrossed) return;
+  if (node->childCrossed || node->isLeaf()) return;
   calcPairsHelper(node->child[0], node->child[1]);
   node->childCrossed = true;
 }
 
 void Broadphase::calcPairsHelper(Node *n0, Node *n1) {
-  if (!n0->aabb.collides(n1->aabb)) {
-    if (!n0->isLeaf()) crossChildren(n0);
-    if (!n1->isLeaf()) crossChildren(n1);
-    return;
-  }
+  crossChildren(n0);
+  crossChildren(n1);
+  if (!n0->aabb.collides(n1->aabb)) return;
   if (n0->isLeaf()) {
     if (n1->isLeaf()) {
-      if (n0->item->getAabb().collides(n1->item->getAabb())) {
+      if (n0->item->getAabb().collides(n1->item->getAabb()))
         pairs.emplace_back(n0->item, n1->item);
-      }
     } else {
-      crossChildren(n1);
       calcPairsHelper(n0, n1->child[0]);
       calcPairsHelper(n0, n1->child[1]);
     }
   } else {
     if (n1->isLeaf()) {
-      crossChildren(n0);
       calcPairsHelper(n1, n0->child[0]);
       calcPairsHelper(n1, n0->child[1]);
     } else {
-      crossChildren(n0);
-      crossChildren(n1);
       for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
           calcPairsHelper(n0->child[i], n1->child[j]);
