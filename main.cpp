@@ -1,5 +1,6 @@
 #include "bullet.hpp"
 #include "svg.hpp"
+#include "ws.hpp"
 
 #include <iostream>
 #include <cstdlib>

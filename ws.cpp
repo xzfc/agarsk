@@ -1,108 +1,84 @@
 #include "ws.hpp"
 
-#include <libwebsockets.h>
+#include <thread>
+#include <boost/thread/shared_mutex.hpp>
+#include <server_ws.hpp>
 
-#include <iostream>
-#include <cstring>
-#include <cstdlib>
+typedef SimpleWeb::SocketServer<SimpleWeb::WS> WS;
+typedef std::shared_ptr<WS::Connection> pConnection;
 
-struct WsClientData {
-  struct libwebsocket *ws;
-  bool hello = false;
+struct WsServerInternals {
+  bool running = false;
+  WS ws;
+  std::thread serverThread;
 
-  bool bad = false;
-};
-
-static WsServer *server;
-
-static int callback_http(struct libwebsocket_context *,
-                         struct libwebsocket *,
-                         enum libwebsocket_callback_reasons reason, void *user,
-                         void *in, size_t len) {
-    return 0;
-}
-
-static int callback_normal(struct libwebsocket_context *,
-                           struct libwebsocket *ws,
-                           enum libwebsocket_callback_reasons reason, void *user_,
-                           void *in_, size_t len) {
-  if(reason == 30) return 0;
-  std::cout << "Callback!" << reason << "\n";
-  WsClientData *user = static_cast<WsClientData *>(user_);
-  uint8_t *in = static_cast<uint8_t*>(in_);
-  switch (reason) {
-    case LWS_CALLBACK_ESTABLISHED: {
-      std::cout << "Connected!\n";
-      new (user_) WsClientData;
-      user->ws = ws;
-      break;
-    }
-    case LWS_CALLBACK_RECEIVE: {
-      std::cout << "Receive:";
-      for (size_t i = 0; i < len; i++)
-        std::cout << ' ' << (int)in[i];
-      std::cout << " | ";
-      for (size_t i = 0; i < len; i++)
-        if ( ((char)in[i]) >= ' ' && ((char)in[i]) <= '~')
-          std::cout << (char)in[i];
-        else
-          std::cout << '?';
-      std::cout << "\n";
-      
-      break; 
-      if (user->hello) {
-        
-      } else {
-        if (len != 5 || in[0] != 255)
-          user->bad = true;
-        else
-          user->hello = true;
-      }
-      break;
-    }
-    case LWS_CALLBACK_SERVER_WRITEABLE: {
-      unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + len + LWS_SEND_BUFFER_POST_PADDING];
-      break;
-    }
-    case LWS_CALLBACK_WSI_DESTROY: {
-      user->~WsClientData();
-      break;
-    }
-  }
-  return 0;
-}
-
-static struct libwebsocket_protocols protocols[] = {
-  // { "http-only", callback_http,   0, 0, },
-  { "nope",          callback_normal, sizeof (WsClientData), 1024*1024, },
-  { NULL, NULL, 0, 0 }
-};
-
-WsServer::WsServer(int port) {
-  server = this;
+  boost::shared_mutex idMutex;
+  unsigned idCounter = 0;
+  std::map<unsigned, pConnection> id2connection;
+  std::map<pConnection, unsigned> connection2id;
   
-  struct lws_context_creation_info info;
-  memset(&info, 0, sizeof info);
-  info.port = port;
-  info.iface = NULL;
-  info.extensions = libwebsocket_get_internal_extensions();
-  info.uid = info.gid = -1;
-  // info.opts = 0; // wtf is this?
-  // info.ka_time = 5; // seconds or milliseconds or anything else?
-  info.protocols = protocols;
+  WsServerInternals(int port) : ws(port, 4 /* threads */) {}
+};
 
-  context = libwebsocket_create_context(&info);
+WsServer::WsServer(unsigned port) {
+  priv = new WsServerInternals(port);
+  
+  auto &endpoint = priv->ws.endpoint["/"];
+  
+  endpoint.onopen = [&](pConnection connection) {
+    priv->idMutex.lock();
+    auto id = ++priv->idCounter;
+    priv->id2connection[id] = connection;
+    priv->connection2id[connection] = id;
+    priv->idMutex.unlock();
+    wsOnConnect(id);
+  };
+
+  endpoint.onclose = [&](pConnection connection, int status, const std::string& reason) {
+    priv->idMutex.lock();
+    auto id = priv->connection2id.at(connection);
+    priv->id2connection.erase(id);
+    priv->connection2id.erase(connection);
+    priv->idMutex.unlock();
+    wsOnDisconnect(id);
+  };
+
+  endpoint.onerror = [&](pConnection connection, const boost::system::error_code& ec) {
+    endpoint.onclose(connection, 0, "");
+  };
+
+  endpoint.onmessage = [&](pConnection connection, std::shared_ptr<WS::Message> message) {
+    priv->idMutex.lock_shared();
+    auto id = priv->connection2id.at(connection);
+    priv->idMutex.unlock_shared();
+    wsOnReceive(id, message->data);
+  };
 }
 
 WsServer::~WsServer() {
-  //force_exit = 1;
-  libwebsocket_cancel_service(context);
-  libwebsocket_context_destroy(context);
+  wsStop();
+  delete priv;
 }
 
-int main() {
-  WsServer w(8000);
-  while (1) {
-    libwebsocket_service(w.context, 50);
+void WsServer::wsRun() {
+  if (priv->running) return;
+  priv->serverThread = std::thread( [&]() { priv->ws.start(); });
+}
+
+void WsServer::wsStop() {
+  if (!priv->running) return;
+  priv->ws.stop();
+  priv->serverThread.join();
+}
+
+void WsServer::wsSend(unsigned id, std::stringstream msg) {
+  pConnection connection;
+  {
+    boost::shared_lock<boost::shared_mutex>(priv->idMutex);
+    auto iter = priv->id2connection.find(id);
+    if (iter == priv->id2connection.end())
+      return;
+    connection = iter->second;
   }
+  priv->ws.send(connection, msg, nullptr, 130);
 }
