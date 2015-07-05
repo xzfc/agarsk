@@ -13,9 +13,8 @@ struct WsServerInternals {
   std::thread serverThread;
 
   boost::shared_mutex idMutex;
-  unsigned idCounter = 0;
-  std::map<unsigned, pConnection> id2connection;
-  std::map<pConnection, unsigned> connection2id;
+  std::map<Player*, pConnection> id2connection;
+  std::map<pConnection, Player*> connection2id;
   
   WsServerInternals(int port) : ws(port, 4 /* threads */) {}
 };
@@ -26,12 +25,11 @@ WsServer::WsServer(unsigned port) {
   auto &endpoint = priv->ws.endpoint["/"];
   
   endpoint.onopen = [&](pConnection connection) {
+    auto player = wsOnConnect();
     priv->idMutex.lock();
-    auto id = ++priv->idCounter;
-    priv->id2connection[id] = connection;
-    priv->connection2id[connection] = id;
+    priv->id2connection[player] = connection;
+    priv->connection2id[connection] = player;
     priv->idMutex.unlock();
-    wsOnConnect(id);
   };
 
   endpoint.onclose = [&](pConnection connection, int status, const std::string& reason) {
@@ -51,7 +49,10 @@ WsServer::WsServer(unsigned port) {
     priv->idMutex.lock_shared();
     auto id = priv->connection2id.at(connection);
     priv->idMutex.unlock_shared();
-    wsOnReceive(id, message->data);
+    std::stringstream ss;
+    message->data >> ss.rdbuf();
+    std::string s = ss.str();
+    wsOnReceive(id, s.c_str(), s.length());
   };
 }
 
@@ -71,11 +72,11 @@ void WsServer::wsStop() {
   priv->serverThread.join();
 }
 
-void WsServer::wsSend(unsigned id, std::stringstream msg) {
+void WsServer::wsSend(Player *player, std::stringstream msg) {
   pConnection connection;
   {
     boost::shared_lock<boost::shared_mutex>(priv->idMutex);
-    auto iter = priv->id2connection.find(id);
+    auto iter = priv->id2connection.find(player);
     if (iter == priv->id2connection.end())
       return;
     connection = iter->second;

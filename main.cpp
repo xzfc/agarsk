@@ -1,9 +1,11 @@
 #include "bullet.hpp"
 #include "svg.hpp"
 #include "ws.hpp"
+#include "bytes.hpp"
 
 #include <iostream>
 #include <cstdlib>
+#include <mutex>
 #include <set>
 
 struct Cell;
@@ -17,14 +19,17 @@ struct Modifications {
 };
 
 struct Player {
+  unsigned id;
   Vec2 target;
   bool shoot = false;
   bool split = false;
 
-  bool joined = false;
+  enum class Mode {
+    DEFAULT, SPECTRATE, GAME
+  } mode;
 
   std::set<PlayerCell*> cells;
-  std::string name;
+  std::u16string name;
   uint64_t color = 0;
 };
 
@@ -109,11 +114,122 @@ struct FoodCell : Cell {
   }
 };
 
+struct Game;
+
+namespace update {
+
+struct Update {
+  virtual void woof(Player *, Game *) {}
+};
+
+struct Spawn : Update {
+  std::u16string name;
+  Spawn(BytesOut &b)
+  { name = b.getU16String(); }
+};
+
+struct Join : Update {
+};
+
+struct Direction : Update {
+  double x, y;
+  uint32_t width;
+  Direction(BytesOut &b)
+  { x = b.get<double>();
+    y = b.get<double>();
+    width = b.get<uint32_t>(); }
+};
+
+struct Split : Update {
+};
+
+struct Eject : Update {
+};
+
+struct AFK : Update {
+};
+
+struct Explode : Update {
+};
+
+struct Q : Update {
+};
+
+struct Token : Update {
+  std::string token;
+  Token(BytesOut &b)
+  { b.pos = b.len; /* just ignore rest bytes */ }
+};
+
+struct Error : Update {
+};
+
+Update *parse0(BytesOut &b) {
+  switch (b.getByte()) {
+    case   0: return new Spawn(b);
+    case   1: return new Join;
+    case  16: return new Direction(b);
+    case  17: return new Split;
+    case  18: return new Eject;
+    case  19: return new AFK;
+    case  20: return new Explode;
+    case  21: return new Q;
+    case  80: return new Token(b);
+    case 254:
+    case 255: return new Q(); // :3
+  }
+  return 0;
+}
+
+Update *parse(BytesOut &b) {
+  Update *update = parse0(b);
+  if (!update || b.len != b.pos) {
+    delete update;
+    return new Error;
+  }
+  return update;
+}
+
+}
+
 struct Game {
   Broadphase b;
+  struct GameWsServer : WsServer {
+    Game &game;
+    GameWsServer(Game &game) : game(game), WsServer(8000) {}
+    Player *wsOnConnect() override {
+      Player *p = new Player;
+      return p;
+      //game.joinPlayer(p);
+    }
+    void wsOnReceive(Player *p, const char *data, size_t len) override {
+      BytesOut b {data, len, 0};
+      auto type = b.get<uint8_t>();
+      switch (type) {
+        case   0: //nickname
+          
+          //std::u16string();
+          break;
+        case 254: // hello
+        case 255: // hello
+        case  80: // Connection Token
+          break;
+      }
+    }
+    void wsOnDisconnect(Player *p) override {
+    }
+  } ws;
 
-  std::vector<Player*> players;
-  std::set<Cell*> cells;
+  Game() : ws(*this) {}
+
+  struct Updates {
+    std::mutex mutex;
+    std::set<Player *> joinedPlayers;
+    std::set<Player *> leavedPlayers;
+  } updates;
+
+  std::set<Player *> players;
+  std::set<Cell *> cells;
 
   void addPellets(int count) {
     for (int i = 0; i < count; i++) {
@@ -124,13 +240,21 @@ struct Game {
   }
 
   void joinPlayer(Player *player) {
-    if (player->joined) return;
-    player->joined = true;
+    if (player->mode == Player::Mode::GAME) return;
+    player->mode == Player::Mode::GAME;
 
     auto cell = new PlayerCell(player, {drand48()*1000, drand48()*1000}, 10);
     cells.insert(cell);
     b.add(cell);
-    players.push_back(player);
+    players.insert(player);
+  }
+
+  void handleUpdates() {
+    std::lock_guard<std::mutex> lock(updates.mutex);
+    
+    
+    updates.joinedPlayers.clear();
+    updates.leavedPlayers.clear();
   }
 
   void step() {
@@ -253,10 +377,14 @@ int main() {
   game.addPellets(2000);
   char fname[32];
   
-  for (int i = 0; i < 1000; i++) {
+  /*
+  for (int i = 0; i < 1000 || 1; i++) {
     sprintf(fname, "out/%04d.svg", i);
     //if(i % 10 == 0) game.svg(fname);
     game.step();
   }
-  game.stop();
+  */
+  game.ws.wsRun();
+  while(1);
+  //game.stop();
 }

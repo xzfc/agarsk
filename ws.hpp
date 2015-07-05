@@ -8,17 +8,18 @@
 // ws: disconnect -> modify player state; remove player
 // game: send (state)
 
+struct Player;
 struct WsServer {
   WsServer(unsigned port);
   ~WsServer();
   void wsRun();
   void wsStop();
   
-  virtual void wsOnConnect(unsigned id) = 0;
-  virtual void wsOnReceive(unsigned id, std::istream &ss) = 0;
-  virtual void wsOnDisconnect(unsigned id) = 0;
+  virtual Player* wsOnConnect() = 0;
+  virtual void wsOnReceive(Player *, const char *data, size_t len) = 0;
+  virtual void wsOnDisconnect(Player *) = 0;
   
-  void wsSend(unsigned id, std::stringstream msg);
+  void wsSend(Player *, std::stringstream msg);
  private:
   struct WsServerInternals *priv;
 };
