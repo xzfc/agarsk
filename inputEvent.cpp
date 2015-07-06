@@ -1,16 +1,53 @@
 #include "inputEvent.hpp"
 #include "game.hpp"
-#include "bytes.hpp"
+#include "ws.hpp" // IWsConnection::send
+#include "outputEvent.hpp" // BytesOut
 
 #include <iostream>
+#include <locale>
+#include <codecvt>
+
+struct BytesIn {
+  const char *s;
+  size_t len;
+  size_t pos;
+
+  uint8_t getByte()
+  { if(pos == len) throw 0;
+    return s[pos++]; }
+
+  template <class T>
+  T get() {
+    union {
+      unsigned char data[sizeof(T)];
+      T result;
+    };
+    for (int i = 0; i<sizeof(T); i++)
+      data[i] = getByte();
+    return result;
+  }
+
+  std::u16string getU16String(bool nullTerminated)
+  { std::u16string res;
+    for (;;) {
+      auto c = get<uint16_t>();
+      if (!c && nullTerminated)
+        return res;
+      res += c;
+      if (len == pos && !nullTerminated)
+        return res;
+    }
+  }
+};
 
 struct Spawn : InputEvent {
   std::u16string name;
-  Spawn(BytesOut &b)
-  { name = b.getU16String(); }
+  Spawn(BytesIn &b)
+  { name = b.getU16String(false); }
 
   void apply(Game &g) override {
     std::cout << "Yay, player joined!\n";
+    player->name = name; // TODO: change only on death
     g.joinPlayer(player);
   }
 };
@@ -21,10 +58,13 @@ struct Spectrate : InputEvent {
 struct Direction : InputEvent {
   double x, y;
   uint32_t width;
-  Direction(BytesOut &b) {
+  Direction(BytesIn &b) {
     x = b.get<double>();
     y = b.get<double>();
     width = b.get<uint32_t>();
+  }
+  void apply(Game &g) override {
+    player->target = {x, y};
   }
 };
 
@@ -45,9 +85,21 @@ struct Q : InputEvent {
 
 struct Token : InputEvent {
   std::string token;
-  Token(BytesOut &b) {
+  Token(BytesIn &b) {
     b.pos = b.len; /* just ignore rest bytes */
   }
+};
+
+struct Hello254 : InputEvent {
+  uint32_t value4;
+  Hello254(BytesIn &b)
+  { value4 = b.get<uint32_t>(); }
+};
+
+struct Hello255 : InputEvent {
+  uint32_t value154669603;
+  Hello255(BytesIn &b)
+  { value154669603 = b.get<uint32_t>(); }
 };
 
 struct Error : InputEvent {
@@ -55,15 +107,20 @@ struct Error : InputEvent {
 
 void Connect::apply(Game &game) {
   game.players.insert(player);
+  BytesOut b;
+  FieldSize(game, b);
+  player->connection->send(b.out);
 }
 
 void Disconnect::apply(Game &game) {
   game.players.erase(player);
+  delete player;
+  player = 0;
 }
 
-static InputEvent *parse_(BytesOut &b) {
+static InputEvent *parse_(BytesIn &b) {
   auto x = b.getByte();
-  std::cout << "Input event " << (unsigned)x << "\n";
+  //std::cout << "Input event " << (unsigned)x << "\n";
   switch (x) {
     case   0: return new Spawn(b);
     case   1: return new Spectrate;
@@ -74,18 +131,25 @@ static InputEvent *parse_(BytesOut &b) {
     case  20: return new Explode;
     case  21: return new Q;
     case  80: return new Token(b);
-    case 254:
-    case 255: return new Q(); // :3
+    case 254: return new Hello254(b);
+    case 255: return new Hello255(b);
   }
   return 0;
 }
 
 InputEvent *InputEvent::parse(const char *data, size_t len) {
-  BytesOut b {data, len, 0};
-  InputEvent *ie = parse_(b);
+  BytesIn b {data, len, 0};
+  /*
+  std::cout << "Input event:";
+  for (size_t i = 0; i < len; i++) std::cout << ' ' << (unsigned)(unsigned char)data[i];
+  std::cout << "\n";*/
+
+  InputEvent *ie = 0;
+  try { ie = parse_(b); }
+  catch (int x) { std::cout << "Input event error 1\n"; };
   if (!ie || b.len != b.pos) {
     delete ie;
-    std::cout << "Input event error\n";
+    std::cout << "Input event error 2\n";
     return new Error;
   }
   return ie;

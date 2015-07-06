@@ -2,11 +2,34 @@
 
 #include "svg.hpp"
 
+void Modifications::clear() {
+  eaten.clear();
+  removed.clear();
+  added.clear();
+  moved.clear();
+}
+
 static uint32_t cellId = 1;
+
+static uint32_t randomColor() {
+  constexpr uint8_t a = 7, b = 255;
+  uint32_t yoba = drand48() * (6 * (b-a+1));
+  uint32_t x = yoba % (b-a+1);
+  switch (yoba / (b-a+1)) {
+    case 0: return a <<16 | b <<8 | x;
+    case 1: return a <<16 | x <<8 | b;
+    case 2: return b <<16 | a <<8 | x;
+    case 3: return b <<16 | x <<8 | a;
+    case 4: return x <<16 | a <<8 | b;
+    case 5: return x <<16 | b <<8 | a;
+  }
+  return 0xFFFFFF;
+}
 
 Cell::Cell(Vec2 pos, unsigned mass) : pos(pos) {  
   this->mass(mass);
   id = cellId++;
+  color = randomColor();
 }
 
 unsigned Cell::mass()
@@ -35,10 +58,14 @@ void Cell::step(Modifications &m) {
 }
 
 
-PlayerCell::PlayerCell(Player *p, Vec2 pos, unsigned mass) : Cell(pos, mass) {
+PlayerCell::PlayerCell(Player *p, Vec2 pos, unsigned mass)
+    : Cell(pos, mass)
+{
     player = p;
     type = Type::PLAYER;
+    name = player->name;
     player->cells.insert(this);
+    player->newCells.push_back(id);
 }
 
 PlayerCell::~PlayerCell() {
@@ -84,50 +111,52 @@ void Game::addPellets(int count) {
 
 void Game::joinPlayer(Player *player) {
     if (player->mode == Player::Mode::GAME) return;
-    player->mode == Player::Mode::GAME;
+    player->mode = Player::Mode::GAME;
 
-    auto cell = new PlayerCell(player, {drand48()*1000, drand48()*1000}, 10);
-    cells.insert(cell);
-    b.add(cell);
+    for(auto i = 0; i < 5; i++) {
+      auto cell = new PlayerCell(player, {drand48()*1000, drand48()*1000}, 10);
+      cells.insert(cell);
+      b.add(cell);
+    }
     players.insert(player);
 }
 
 void Game::step() {
-    Modifications m;
-    for (auto c : cells)
-        c->step(m);
+  mod.clear();
+  for (auto c : cells)
+    c->step(mod);
 
-    for (auto p : players) {
-        for (auto c : p->cells)
-            c->velocity = (p->target - c->pos).normalize() * 0.5;
-        p->shoot = false; // TODO
-        p->split = false; // TODO
+  for (auto p : players) {
+    for (auto c : p->cells)
+      c->velocity = (p->target - c->pos).normalize() * 0.5 * 10;
+    p->shoot = false; // TODO
+    p->split = false; // TODO
+  }
+  
+  for (auto p : b.getCollisions()) {
+    Cell *fstCell = dynamic_cast<Cell*>(p.first),
+         *sndCell = dynamic_cast<Cell*>(p.second);
+    if (fstCell && sndCell) {
+      if (fstCell->r < sndCell->r)
+        std::swap(fstCell, sndCell);
+      handleInteraction(fstCell, sndCell);
     }
-
-    for (auto p : b.getCollisions()) {
-        Cell *fstCell = dynamic_cast<Cell*>(p.first),
-                *sndCell = dynamic_cast<Cell*>(p.second);
-        if (fstCell && sndCell) {
-            if (fstCell->r < sndCell->r)
-                std::swap(fstCell, sndCell);
-            handleInteraction(m, fstCell, sndCell);
-        }
-    }
-
-    for (auto p : m.eaten) {
-        p.first->mass(p.first->mass() + p.second->mass());
-        b.remove(p.second);
-        cells.erase(p.second);
-        delete p.second;
-    }
-
-    for (auto c : m.added) {
-        cells.insert(c);
-        b.add(c);
-    }
+  }
+  
+  for (auto p : mod.eaten) {
+    p.first->mass(p.first->mass() + p.second->mass());
+    b.remove(p.second);
+    cells.erase(p.second);
+    delete p.second;
+  }
+  
+  for (auto c : mod.added) {
+    cells.insert(c);
+    b.add(c);
+  }
 }
 
-void Game::handleInteraction(Modifications &m, Cell *fst, Cell *snd) {
+void Game::handleInteraction(Cell *fst, Cell *snd) {
     bool actionEat = false;
     bool actionCollide = false;
     bool actionExplode = false;
@@ -165,7 +194,7 @@ void Game::handleInteraction(Modifications &m, Cell *fst, Cell *snd) {
 
     if (actionEat && !fst->eaten && !snd->eaten) {
         snd->eaten = true;
-        m.eaten.push_back({fst, snd});
+        mod.eaten.push_back({fst, snd});
     }
 
     if (actionCollide) {

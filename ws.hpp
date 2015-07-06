@@ -9,13 +9,17 @@
 
 struct Update;
 
-struct WsServer {
-  WsServer(unsigned port);
-  ~WsServer();
-  void run();
-  void stop();
-  std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> getInput();
-  void send(Player*, const std::vector<char> &msg);
- private:
-  struct WsServerInternals *priv;
+struct IWsConnection {
+  virtual void send(const std::vector<char> &msg) = 0;
+  virtual ~IWsConnection() {};
 };
+
+struct IWsServer {
+  virtual ~IWsServer() {};
+  virtual void run() = 0;
+  virtual void stop() = 0;
+  virtual std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> getInput() = 0;
+  //void send(Player*, const std::vector<char> &msg);
+};
+
+IWsServer *wsServer(unsigned port);
