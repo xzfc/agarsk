@@ -5,3 +5,4 @@ bulletTester
 *.svg
 ext
 external
+.clang-complete

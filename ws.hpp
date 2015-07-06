@@ -1,25 +1,21 @@
 #pragma once
-
 #include <sstream>
 #include <iostream>
+#include <vector>
+#include <memory>
 
-// ws: accept connection -> create new player
-// ws: receive message -> modify player state
-// ws: disconnect -> modify player state; remove player
-// game: send (state)
+#include "player.hpp"
+#include "inputEvent.hpp"
 
-struct Player;
+struct Update;
+
 struct WsServer {
   WsServer(unsigned port);
   ~WsServer();
-  void wsRun();
-  void wsStop();
-  
-  virtual Player* wsOnConnect() = 0;
-  virtual void wsOnReceive(Player *, const char *data, size_t len) = 0;
-  virtual void wsOnDisconnect(Player *) = 0;
-  
-  void wsSend(Player *, std::stringstream msg);
+  void run();
+  void stop();
+  std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> getInput();
+  //void send(Player*, std::stringstream msg);
  private:
   struct WsServerInternals *priv;
 };
