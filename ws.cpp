@@ -36,7 +36,7 @@ WsServer::WsServer(unsigned port) {
   auto &endpoint = priv->ws.endpoint["/"];
   
   endpoint.onopen = [&](pConnection connection) {
-    auto player = new Player();
+    auto player = new Player;
     priv->idMutex.lock();
     priv->id2connection[player] = connection;
     priv->connection2id[connection] = player;
@@ -74,6 +74,7 @@ WsServer::WsServer(unsigned port) {
     std::string s = ss.str();
     
     std::unique_ptr<InputEvent> ev(InputEvent::parse(s.c_str(), s.length()));
+    ev->player = player;
     priv->addInput(ev);
   };
 }
@@ -104,8 +105,7 @@ std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> WsServer::getInput() {
   return result;
 }
 
-/*
-void WsServer::send(Player *player, std::stringstream msg) {
+void WsServer::send(Player *player, const std::vector<char> &msg) {
   pConnection connection;
   {
     boost::shared_lock<boost::shared_mutex>(priv->idMutex);
@@ -114,6 +114,7 @@ void WsServer::send(Player *player, std::stringstream msg) {
       return;
     connection = iter->second;
   }
-  priv->ws.send(connection, msg, nullptr, 130);
+  std::stringstream ss;
+  ss.write(msg.data(), msg.size());
+  priv->ws.send(connection, ss, nullptr, 130);
 }
-*/

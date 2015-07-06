@@ -1,13 +1,21 @@
 #include "inputEvent.hpp"
+#include "game.hpp"
 #include "bytes.hpp"
+
+#include <iostream>
 
 struct Spawn : InputEvent {
   std::u16string name;
   Spawn(BytesOut &b)
   { name = b.getU16String(); }
+
+  void apply(Game &g) override {
+    std::cout << "Yay, player joined!\n";
+    g.joinPlayer(player);
+  }
 };
 
-struct Join : InputEvent {
+struct Spectrate : InputEvent {
 };
 
 struct Direction : InputEvent {
@@ -45,10 +53,20 @@ struct Token : InputEvent {
 struct Error : InputEvent {
 };
 
+void Connect::apply(Game &game) {
+  game.players.insert(player);
+}
+
+void Disconnect::apply(Game &game) {
+  game.players.erase(player);
+}
+
 static InputEvent *parse_(BytesOut &b) {
-  switch (b.getByte()) {
+  auto x = b.getByte();
+  std::cout << "Input event " << (unsigned)x << "\n";
+  switch (x) {
     case   0: return new Spawn(b);
-    case   1: return new Join;
+    case   1: return new Spectrate;
     case  16: return new Direction(b);
     case  17: return new Split;
     case  18: return new Eject;
@@ -67,6 +85,7 @@ InputEvent *InputEvent::parse(const char *data, size_t len) {
   InputEvent *ie = parse_(b);
   if (!ie || b.len != b.pos) {
     delete ie;
+    std::cout << "Input event error\n";
     return new Error;
   }
   return ie;

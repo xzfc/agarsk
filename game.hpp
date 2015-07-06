@@ -1,8 +1,9 @@
 #pragma once
+#include <mutex>
+
 #include "bullet.hpp"
 #include "player.hpp"
 
-#include <mutex>
 
 struct Cell;
 struct PlayerCell;
@@ -19,22 +20,16 @@ struct Cell : Item {
   unsigned mass_;
   double r;
   Vec2 pos, velocity;
-  
   bool eaten = false;
   bool moved = false;
+  int id;
   
   Cell(Vec2 pos, unsigned mass);
-
-  unsigned mass();
-
-  void mass(int mass);
-  
   virtual ~Cell() {}
-  
+  unsigned mass();
+  void mass(int mass);
   Aabb getAabb() const override;
-  
   Aabb getPotentialAabb() const override;
-  
   virtual void svg(struct Svg &s) const;
   virtual void step(Modifications &m);
 };
@@ -57,7 +52,7 @@ struct Game {
   Broadphase b;
   std::set<Player *> players;
   std::set<Cell *> cells;
-
+  
   void addPellets(int count);
   void joinPlayer(Player *player);
   void step();

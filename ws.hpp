@@ -15,7 +15,7 @@ struct WsServer {
   void run();
   void stop();
   std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> getInput();
-  //void send(Player*, std::stringstream msg);
+  void send(Player*, const std::vector<char> &msg);
  private:
   struct WsServerInternals *priv;
 };

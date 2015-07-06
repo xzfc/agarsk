@@ -3,6 +3,7 @@
 #include <cstring>
 #include <locale>
 #include <codecvt>
+#include <iostream>
 
 struct BytesOut {
   const char *s;
@@ -23,5 +24,12 @@ struct BytesOut {
     return result; }
 
   std::u16string getU16String()
-  { return std::u16string(); }
+  { std::u16string res;
+    for (;;) {
+      auto c = get<uint16_t>();
+      std::cout << "[" << c << "\n";
+      if (c) return res;
+      res += c;
+    }
+  }
 };

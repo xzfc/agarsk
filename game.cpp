@@ -2,8 +2,12 @@
 
 #include "svg.hpp"
 
-Cell::Cell(Vec2 pos, unsigned mass) : pos(pos)
-{ this->mass(mass); }
+static uint32_t cellId = 1;
+
+Cell::Cell(Vec2 pos, unsigned mass) : pos(pos) {  
+  this->mass(mass);
+  id = cellId++;
+}
 
 unsigned Cell::mass()
 { return mass_; }

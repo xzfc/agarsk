@@ -17,8 +17,10 @@ run: main
 bullet.o: bullet.cpp bullet.hpp
 bulletTester.o: bulletTester.cpp bullet.hpp svg.hpp
 game.o: game.cpp game.hpp bullet.hpp player.hpp svg.hpp
-inputEvent.o: inputEvent.cpp inputEvent.hpp bytes.hpp
-main.o: main.cpp game.hpp bullet.hpp player.hpp
+inputEvent.o: inputEvent.cpp inputEvent.hpp game.hpp bullet.hpp \
+ player.hpp bytes.hpp
+main.o: main.cpp game.hpp bullet.hpp player.hpp ws.hpp inputEvent.hpp \
+ outputEvent.hpp
 ws.o: ws.cpp ws.hpp player.hpp bullet.hpp inputEvent.hpp
 
 clean:
