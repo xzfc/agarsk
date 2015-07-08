@@ -61,7 +61,7 @@ struct FoodCell : Cell {
 
 struct Game {
   Broadphase b;
-  Aabb size {0,-0,1000,1000};
+  Aabb size {0,0,1000,1000};
   CellId cellId = 1;
   std::set<Player *> players;
   std::set<Cell *> cells;

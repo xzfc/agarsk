@@ -114,6 +114,8 @@ void Connect::apply(Game &game) {
 
 void Disconnect::apply(Game &game) {
   game.players.erase(player);
+  for (auto cell : player->cells)
+    cell->player = nullptr;
   delete player;
   player = 0;
 }

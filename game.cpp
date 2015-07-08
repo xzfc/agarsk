@@ -69,11 +69,15 @@ PlayerCell::PlayerCell(Game &game, Player *p, Vec2 pos, unsigned mass)
 }
 
 PlayerCell::~PlayerCell() {
+  if (!player)
+    return;
   player->cells.erase(this);
-  // todo:check if player have other cells
+  // TODO check if player have other cells
 }
 
 PlayerCell *PlayerCell::split(Modifications &m, double size) {
+  if (!player)
+    return nullptr; // TODO split over huge amount of cells
   if (player->cells.size() >= 16)
     return nullptr;
   auto newCell = new PlayerCell(game, player, pos, mass() * size);
