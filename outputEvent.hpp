@@ -47,11 +47,11 @@ inline void Cell_(Cell *c, BytesOut &b) {
   b.put<int16_t>(c->pos.x);
   b.put<int16_t>(c->pos.y);
   b.put<int16_t>(c->r);
-  b.put<uint8_t>(c->color >>  0 & 0xFF); // r
-  b.put<uint8_t>(c->color >>  8 & 0xFF); // g
-  b.put<uint8_t>(c->color >> 16 & 0xFF); // b
-  b.put<uint8_t>(0); // flags
-  b.putString(c->name); // name
+  b.put<uint8_t>(c->color >>  0 & 0xFF);
+  b.put<uint8_t>(c->color >>  8 & 0xFF);
+  b.put<uint8_t>(c->color >> 16 & 0xFF);
+  b.put<uint8_t>(c->type == Cell::VIRUS?1:0);
+  b.putString(c->name);
 }
 
 inline void FullWorld(Game &game, BytesOut &b) {

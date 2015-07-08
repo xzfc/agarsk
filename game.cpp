@@ -128,6 +128,8 @@ FoodCell::FoodCell(Game &game) : Cell(game) {
 
 Virus::Virus(Game &game) : Cell(game) {
   type = Type::VIRUS;
+  color = 0x33ff33;
+  setMass(100);
 }
 
 
@@ -154,6 +156,12 @@ void Game::step() {
     auto cell = new FoodCell(*this);
     cell->pos = randomPoint();
     cell->setMass(1);
+  }
+  
+  unsigned needViruses = size.volume() / 500000;
+  for (int i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
+    auto cell = new Virus(*this);
+    cell->pos = randomPoint();
   }
   
   mod.eaten.clear();
