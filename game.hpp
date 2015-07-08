@@ -44,7 +44,7 @@ struct Cell : Item {
   unsigned newMass;
   bool eaten = false;
   
-  Cell(Game &, Vec2 pos, unsigned mass);
+  Cell(Game &);
   virtual ~Cell() {}
   Aabb getAabb() const override;
   Aabb getPotentialAabb() const override;
@@ -56,7 +56,7 @@ struct PlayerCell : Cell {
   Player *player;
   bool exploded = false;
 
-  PlayerCell(Game &, Player *p, Vec2 pos, unsigned mass);
+  PlayerCell(Game &, Player *p);
   ~PlayerCell() override;
   void setMass(unsigned) override;
   PlayerCell *split(Modifications &m, double size);
@@ -64,7 +64,7 @@ struct PlayerCell : Cell {
 };
 
 struct FoodCell : Cell {
-  FoodCell(Game &, Vec2 pos, unsigned mass);
+  FoodCell(Game &);
 };
 
 struct Game {

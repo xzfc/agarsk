@@ -37,11 +37,7 @@ void Top::add(Player *p) {
   players[pos] = p;
 }
 
-Cell::Cell(Game &game, Vec2 pos, unsigned mass)
-    : pos(pos)
-    , game(game)
-{
-  setMass(mass);
+Cell::Cell(Game &game) : game(game) {
   id = game.cellId++;
   color = randomColor();
 
@@ -78,9 +74,7 @@ void Cell::step(Modifications &) {
 }
 
 
-PlayerCell::PlayerCell(Game &game, Player *p, Vec2 pos, unsigned mass)
-    : Cell(game, pos, mass)
-{
+PlayerCell::PlayerCell(Game &game, Player *p) : Cell(game) {
   player = p;
   type = Type::PLAYER;
   name = player->name;
@@ -107,9 +101,10 @@ PlayerCell *PlayerCell::split(Modifications &m, double size) {
     return nullptr; // TODO split over huge amount of cells
   if (player->cells.size() >= 16)
     return nullptr;
-  auto newCell = new PlayerCell(game, player, pos, mass * size);
-  newCell->pos.x += 0.1*(drand48()-0.5);
-  newCell->pos.y += 0.1*(drand48()-0.5);
+  auto newCell = new PlayerCell(game, player);
+  newCell->pos.x = pos.x + 0.1*(drand48()-0.5);
+  newCell->pos.y = pos.y + 0.1*(drand48()-0.5);
+  newCell->setMass(mass*size);
   setMass(mass * (1-size));
   return newCell;
 }
@@ -126,9 +121,7 @@ void PlayerCell::step(Modifications &m) {
 }
 
 
-FoodCell::FoodCell(Game &game, Vec2 pos, unsigned mass)
-    : Cell(game, pos, mass)
-{
+FoodCell::FoodCell(Game &game) : Cell(game) {
   type = Type::FOOD;
 }
 
@@ -137,15 +130,20 @@ void Game::joinPlayer(Player *player) {
     player->mode = Player::Mode::GAME;
 
     for(auto i = 0; i < 1; i++) {
-      auto cell = new PlayerCell(*this, player, {drand48()*1000, drand48()*1000}, 10);
+      auto cell = new PlayerCell(*this, player);
+      cell->pos = {drand48()*1000, drand48()*1000};
+      cell->setMass(10);
     }
     players.insert(player);
 }
 
 void Game::step() {
   unsigned needPellets = size.volume() / 5000;
-  for (int i = cellCountByType[Cell::FOOD]; i < needPellets; i++)
-    auto cell = new FoodCell(*this, {drand48()*1000, drand48()*1000}, 1);
+  for (int i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
+    auto cell = new FoodCell(*this);
+    cell->pos = {drand48()*1000, drand48()*1000};
+    cell->setMass(1);
+  }
   
   mod.eaten.clear();
   
