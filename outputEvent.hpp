@@ -73,12 +73,12 @@ inline void ModifyWorld(Game &game, BytesOut &b) {
 
   b.put<uint16_t>(game.mod.eaten.size());
   for (auto &e : game.mod.eaten) {
-    b.put<uint32_t>(e.first->id);
-    b.put<uint32_t>(e.second->id);
+    b.put<uint32_t>(e.first);
+    b.put<uint32_t>(e.second);
   }
 
   for (auto &c : game.cells)
-    if (c->moved && !c->eaten)
+    if (c->updated && !c->eaten)
       Cell_(c, b);
   
   b.put<uint32_t>(0);

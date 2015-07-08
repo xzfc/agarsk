@@ -8,29 +8,37 @@
 struct Cell;
 struct PlayerCell;
 
+typedef uint32_t CellId;
+
 struct Modifications {
-  std::vector<std::pair<Cell *, Cell *>> eaten;
-  std::vector<Cell *> removed;
+  std::vector<std::pair<CellId, CellId>> eaten;
+  std::vector<Cell *> deleted;
   std::vector<Cell *> added;
-  std::vector<Cell *> moved;
   void clear();
 };
 
 struct Cell : Item {
+  // Static parameters
   enum class Type { PLAYER, VIRUS, PELLET, FOOD } type;
+  uint32_t color = 0xFFFFFF;
+  CellId id = 1;
+  std::u16string name;
+
+  // Dynamic parameters (mass, radius)
+  unsigned mass();
+  void mass(int mass);
   unsigned mass_;
   double r;
+  // Dynamic parameters (other)
   Vec2 pos, velocity;
+
+  // State changes flags
+  bool updated = false;
+  unsigned newMass;
   bool eaten = false;
-  bool moved = false;
-  uint32_t color = 0xFFFFFF;
-  int id = 1;
-  std::u16string name;
   
   Cell(Vec2 pos, unsigned mass);
   virtual ~Cell() {}
-  unsigned mass();
-  void mass(int mass);
   Aabb getAabb() const override;
   Aabb getPotentialAabb() const override;
   virtual void svg(struct Svg &s) const;

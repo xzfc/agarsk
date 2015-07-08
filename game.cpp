@@ -4,9 +4,8 @@
 
 void Modifications::clear() {
   eaten.clear();
-  removed.clear();
+  deleted.clear();
   added.clear();
-  moved.clear();
 }
 
 static uint32_t cellId = 1;
@@ -30,6 +29,9 @@ Cell::Cell(Vec2 pos, unsigned mass) : pos(pos) {
   this->mass(mass);
   id = cellId++;
   color = randomColor();
+
+  eaten = false;
+  updated = true;
 }
 
 unsigned Cell::mass()
@@ -49,12 +51,14 @@ Aabb Cell::getPotentialAabb() const {
 void Cell::svg(Svg &s) const
 { s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)"); }
 
-void Cell::step(Modifications &m) {
-    if (velocity != Vec2 {0,0}) {
-        pos += velocity;
-        velocity = velocity.shorten(0.01);
-        m.moved.push_back(this);
-    }
+void Cell::step(Modifications &) {
+  eaten = updated = false;
+  newMass = mass();
+  if (velocity != Vec2 {0,0}) {
+    pos += velocity;
+    velocity = velocity.shorten(0.01);
+    updated = true;
+  }
 }
 
 
@@ -113,7 +117,7 @@ void Game::joinPlayer(Player *player) {
     if (player->mode == Player::Mode::GAME) return;
     player->mode = Player::Mode::GAME;
 
-    for(auto i = 0; i < 5; i++) {
+    for(auto i = 0; i < 1; i++) {
       auto cell = new PlayerCell(player, {drand48()*1000, drand48()*1000}, 10);
       cells.insert(cell);
       b.add(cell);
@@ -142,12 +146,22 @@ void Game::step() {
       handleInteraction(fstCell, sndCell);
     }
   }
-  
-  for (auto p : mod.eaten) {
-    p.first->mass(p.first->mass() + p.second->mass());
-    b.remove(p.second);
-    cells.erase(p.second);
-    delete p.second;
+
+  for (auto c : cells) {
+    if (c->eaten) {
+      mod.deleted.push_back(c);
+      continue;
+    }
+    if (c->newMass != c->mass()) {
+      c->mass(c->newMass);
+      c->updated = true;
+    }
+  }
+
+  for (auto c : mod.deleted) {
+    b.remove(c);
+    cells.erase(c);
+    delete c;
   }
   
   for (auto c : mod.added) {
@@ -194,7 +208,8 @@ void Game::handleInteraction(Cell *fst, Cell *snd) {
 
     if (actionEat && !fst->eaten && !snd->eaten) {
         snd->eaten = true;
-        mod.eaten.push_back({fst, snd});
+        fst->newMass += snd->newMass;
+        mod.eaten.push_back({fst->id, snd->id});
     }
 
     if (actionCollide) {
