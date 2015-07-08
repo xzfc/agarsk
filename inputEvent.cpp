@@ -27,15 +27,15 @@ struct BytesIn {
     return result;
   }
 
-  std::u16string getU16String(bool nullTerminated)
-  { std::u16string res;
+  std::u16string getU16String(bool nullTerminated) {
+    std::u16string res;
     for (;;) {
+      if (len == pos && !nullTerminated)
+        return res;
       auto c = get<uint16_t>();
       if (!c && nullTerminated)
         return res;
       res += c;
-      if (len == pos && !nullTerminated)
-        return res;
     }
   }
 };
