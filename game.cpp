@@ -92,7 +92,8 @@ PlayerCell::~PlayerCell() {
   if (!player)
     return;
   player->cells.erase(this);
-  // TODO check if player have other cells
+  if (player->cells.empty())
+    player->mode = Player::Mode::DEFAULT;
 }
 
 void PlayerCell::setMass(unsigned mass) {
