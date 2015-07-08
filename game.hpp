@@ -4,7 +4,7 @@
 #include "bullet.hpp"
 #include "player.hpp"
 
-
+struct Game;
 struct Cell;
 struct PlayerCell;
 
@@ -14,12 +14,12 @@ struct Modifications {
   std::vector<std::pair<CellId, CellId>> eaten;
   std::vector<Cell *> deleted;
   std::vector<Cell *> added;
-  void clear();
 };
 
 struct Cell : Item {
   // Static parameters
-  enum class Type { PLAYER, VIRUS, PELLET, FOOD } type;
+  Game &game;
+  enum Type { PLAYER, VIRUS, PELLET, FOOD, size } type;
   uint32_t color = 0xFFFFFF;
   CellId id = 1;
   std::u16string name;
@@ -37,7 +37,7 @@ struct Cell : Item {
   unsigned newMass;
   bool eaten = false;
   
-  Cell(Vec2 pos, unsigned mass);
+  Cell(Game &, Vec2 pos, unsigned mass);
   virtual ~Cell() {}
   Aabb getAabb() const override;
   Aabb getPotentialAabb() const override;
@@ -49,24 +49,25 @@ struct PlayerCell : Cell {
   Player *player;
   bool exploded = false;
 
-  PlayerCell(Player *p, Vec2 pos, unsigned mass);
+  PlayerCell(Game &, Player *p, Vec2 pos, unsigned mass);
   ~PlayerCell() override;
   PlayerCell *split(Modifications &m, double size);
   void step(Modifications &m) override;
 };
 
 struct FoodCell : Cell {
-  FoodCell(Vec2 pos, unsigned mass);
+  FoodCell(Game &, Vec2 pos, unsigned mass);
 };
 
 struct Game {
   Broadphase b;
   Aabb size {0,-0,1000,1000};
+  CellId cellId = 1;
   std::set<Player *> players;
   std::set<Cell *> cells;
+  unsigned cellCountByType[Cell::Type::size] = {0};
   Modifications mod;
-  
-  void addPellets(int count);
+
   void joinPlayer(Player *player);
   void step();
   void handleInteraction(Cell *fst, Cell *snd);

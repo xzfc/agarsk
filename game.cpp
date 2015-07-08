@@ -2,14 +2,6 @@
 
 #include "svg.hpp"
 
-void Modifications::clear() {
-  eaten.clear();
-  deleted.clear();
-  added.clear();
-}
-
-static uint32_t cellId = 1;
-
 static uint32_t randomColor() {
   constexpr uint8_t a = 7, b = 255;
   uint32_t yoba = drand48() * (6 * (b-a+1));
@@ -25,13 +17,17 @@ static uint32_t randomColor() {
   return 0xFFFFFF;
 }
 
-Cell::Cell(Vec2 pos, unsigned mass) : pos(pos) {  
+Cell::Cell(Game &game, Vec2 pos, unsigned mass)
+    : pos(pos)
+    , game(game)
+{
   this->mass(mass);
-  id = cellId++;
+  id = game.cellId++;
   color = randomColor();
 
   eaten = false;
   updated = true;
+  game.mod.added.push_back(this);
 }
 
 unsigned Cell::mass()
@@ -62,55 +58,47 @@ void Cell::step(Modifications &) {
 }
 
 
-PlayerCell::PlayerCell(Player *p, Vec2 pos, unsigned mass)
-    : Cell(pos, mass)
+PlayerCell::PlayerCell(Game &game, Player *p, Vec2 pos, unsigned mass)
+    : Cell(game, pos, mass)
 {
-    player = p;
-    type = Type::PLAYER;
-    name = player->name;
-    player->cells.insert(this);
-    player->newCells.push_back(id);
+  player = p;
+  type = Type::PLAYER;
+  name = player->name;
+  player->cells.insert(this);
+  player->newCells.push_back(id);
 }
 
 PlayerCell::~PlayerCell() {
-    player->cells.erase(this);
-    // todo:check if player have other cells
+  player->cells.erase(this);
+  // todo:check if player have other cells
 }
 
 PlayerCell *PlayerCell::split(Modifications &m, double size) {
-    if (player->cells.size() >= 16)
-        return nullptr;
-    auto newCell = new PlayerCell(player, pos, mass() * size);
-    newCell->pos.x += 0.1*(drand48()-0.5);
-    newCell->pos.y += 0.1*(drand48()-0.5);
-    mass(mass() * (1-size));
-    m.added.push_back(newCell);
-    return newCell;
+  if (player->cells.size() >= 16)
+    return nullptr;
+  auto newCell = new PlayerCell(game, player, pos, mass() * size);
+  newCell->pos.x += 0.1*(drand48()-0.5);
+  newCell->pos.y += 0.1*(drand48()-0.5);
+  mass(mass() * (1-size));
+  return newCell;
 }
 
 void PlayerCell::step(Modifications &m) {
-    Cell::step(m);
-    if (exploded) {
-        PlayerCell *c = this;
-        do {
-            c = c->split(m, 0.5);
-        } while(c);
-        exploded = false;
-    }
+  Cell::step(m);
+  if (exploded) {
+    PlayerCell *c = this;
+    do {
+      c = c->split(m, 0.5);
+    } while(c);
+    exploded = false;
+  }
 }
 
 
-FoodCell::FoodCell(Vec2 pos, unsigned mass) : Cell(pos, mass) {
-    type = Type::FOOD;
-}
-
-
-void Game::addPellets(int count) {
-    for (int i = 0; i < count; i++) {
-        auto cell = new FoodCell({drand48()*1000, drand48()*1000}, 1);
-        cells.insert(cell);
-        b.add(cell);
-    }
+FoodCell::FoodCell(Game &game, Vec2 pos, unsigned mass)
+    : Cell(game, pos, mass)
+{
+  type = Type::FOOD;
 }
 
 void Game::joinPlayer(Player *player) {
@@ -118,17 +106,22 @@ void Game::joinPlayer(Player *player) {
     player->mode = Player::Mode::GAME;
 
     for(auto i = 0; i < 1; i++) {
-      auto cell = new PlayerCell(player, {drand48()*1000, drand48()*1000}, 10);
-      cells.insert(cell);
-      b.add(cell);
+      auto cell = new PlayerCell(*this, player, {drand48()*1000, drand48()*1000}, 10);
     }
     players.insert(player);
 }
 
 void Game::step() {
-  mod.clear();
-  for (auto c : cells)
+  unsigned needPellets = size.volume() / 5000;
+  for (int i = cellCountByType[Cell::FOOD]; i < needPellets; i++)
+    auto cell = new FoodCell(*this, {drand48()*1000, drand48()*1000}, 1);
+  
+  mod.eaten.clear();
+  
+  unsigned pelletCount = 0;
+  for (auto c : cells) {
     c->step(mod);
+  }
 
   for (auto p : players) {
     for (auto c : p->cells)
@@ -159,15 +152,19 @@ void Game::step() {
   }
 
   for (auto c : mod.deleted) {
+    cellCountByType[c->type]--;
     b.remove(c);
     cells.erase(c);
     delete c;
   }
+  mod.deleted.clear();
   
   for (auto c : mod.added) {
+    cellCountByType[c->type]++;
     cells.insert(c);
     b.add(c);
   }
+  mod.added.clear();
 }
 
 void Game::handleInteraction(Cell *fst, Cell *snd) {
