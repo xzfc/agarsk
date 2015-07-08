@@ -68,7 +68,7 @@ void Cell::step(Modifications &) {
   newMass = mass;
   if (velocity != Vec2 {0,0}) {
     pos += velocity;
-    velocity = velocity.shorten(0.01);
+    velocity *= 0.9; // TODO: set zero if small
     updated = true;
   }
 }
@@ -173,8 +173,10 @@ void Game::step() {
 
   top.reset();
   for (auto p : players) {
+    static double pw = std::log(4.0/11)/std::log(100.);
     for (auto c : p->cells)
-      c->velocity = (p->target - c->pos).normalize() * 0.5 * 10;
+      c->velocity = (p->target - c->pos).normalize()
+                    * 20 * std::pow(c->mass, pw);
     p->shoot = false; // TODO
     p->split = false; // TODO
     top.add(p);
