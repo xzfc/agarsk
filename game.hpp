@@ -16,6 +16,14 @@ struct Modifications {
   std::vector<Cell *> added;
 };
 
+struct Top {
+  static constexpr unsigned maxlen = 10;
+  unsigned len;
+  Player *players[maxlen];
+  void reset();
+  void add(Player *);
+};
+
 struct Cell : Item {
   // Static parameters
   Game &game;
@@ -25,9 +33,8 @@ struct Cell : Item {
   std::u16string name;
 
   // Dynamic parameters (mass, radius)
-  unsigned mass();
-  void mass(int mass);
-  unsigned mass_;
+  virtual void setMass(unsigned);
+  unsigned mass;
   double r;
   // Dynamic parameters (other)
   Vec2 pos, velocity;
@@ -51,6 +58,7 @@ struct PlayerCell : Cell {
 
   PlayerCell(Game &, Player *p, Vec2 pos, unsigned mass);
   ~PlayerCell() override;
+  void setMass(unsigned) override;
   PlayerCell *split(Modifications &m, double size);
   void step(Modifications &m) override;
 };
@@ -67,6 +75,7 @@ struct Game {
   std::set<Cell *> cells;
   unsigned cellCountByType[Cell::Type::size] = {0};
   Modifications mod;
+  Top top;
 
   void joinPlayer(Player *player);
   void step();

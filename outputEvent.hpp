@@ -85,3 +85,18 @@ inline void ModifyWorld(Game &game, BytesOut &b) {
   
   b.put<uint32_t>(0);
 }
+
+inline void Top_(Game &game, BytesOut &b) {
+  b.clear();
+  b.put<uint8_t>(49);
+  
+  b.put<uint32_t> (game.top.len);
+  for (size_t i = 0; i < game.top.len; i++) {
+    CellId minId = 0;
+    for (auto cell : game.top.players[i]->cells)
+      if (!minId && minId > cell->id)
+        minId = cell->id;
+    b.put(4);
+    b.putString(game.top.players[i]->name);
+  }
+}

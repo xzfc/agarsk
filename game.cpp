@@ -17,11 +17,31 @@ static uint32_t randomColor() {
   return 0xFFFFFF;
 }
 
+void Top::reset() {
+  len = 0;
+}
+
+void Top::add(Player *p) {
+  if (p->cells.empty())
+    return;
+  unsigned pos;
+  for (pos = 0; pos < len; pos++)
+    if (players[pos]->totalMass > p->totalMass)
+      break;
+  if (pos == maxlen)
+    return;
+  if (len < maxlen)
+    len++;
+  for (unsigned i = len-1; i > pos; i--)
+    players[i] = players[i-1];
+  players[pos] = p;
+}
+
 Cell::Cell(Game &game, Vec2 pos, unsigned mass)
     : pos(pos)
     , game(game)
 {
-  this->mass(mass);
+  setMass(mass);
   id = game.cellId++;
   color = randomColor();
 
@@ -30,26 +50,26 @@ Cell::Cell(Game &game, Vec2 pos, unsigned mass)
   game.mod.added.push_back(this);
 }
 
-unsigned Cell::mass()
-{ return mass_; }
+void Cell::setMass(unsigned mass) {
+  this->mass = mass;
+  r = 10. * sqrt((double)mass);
+}
 
-void Cell::mass(int mass)
-{ this->mass_ = mass;
-    r = 10. * sqrt((double)mass_); }
-
-Aabb Cell::getAabb() const
-{ return {pos.x-r, pos.y-r, pos.x+r, pos.y+r}; }
+Aabb Cell::getAabb() const {
+  return {pos.x-r, pos.y-r, pos.x+r, pos.y+r};
+}
 
 Aabb Cell::getPotentialAabb() const {
     return type == Type::PELLET ? getAabb() : getAabb().expand(3);
 }
 
-void Cell::svg(Svg &s) const
-{ s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)"); }
+void Cell::svg(Svg &s) const {
+  s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)");
+}
 
 void Cell::step(Modifications &) {
   eaten = updated = false;
-  newMass = mass();
+  newMass = mass;
   if (velocity != Vec2 {0,0}) {
     pos += velocity;
     velocity = velocity.shorten(0.01);
@@ -75,15 +95,21 @@ PlayerCell::~PlayerCell() {
   // TODO check if player have other cells
 }
 
+void PlayerCell::setMass(unsigned mass) {
+  if (player)
+    player->totalMass = player->totalMass + this->mass - mass;
+  Cell::setMass(mass);
+}
+
 PlayerCell *PlayerCell::split(Modifications &m, double size) {
   if (!player)
     return nullptr; // TODO split over huge amount of cells
   if (player->cells.size() >= 16)
     return nullptr;
-  auto newCell = new PlayerCell(game, player, pos, mass() * size);
+  auto newCell = new PlayerCell(game, player, pos, mass * size);
   newCell->pos.x += 0.1*(drand48()-0.5);
   newCell->pos.y += 0.1*(drand48()-0.5);
-  mass(mass() * (1-size));
+  setMass(mass * (1-size));
   return newCell;
 }
 
@@ -127,11 +153,13 @@ void Game::step() {
     c->step(mod);
   }
 
+  top.reset();
   for (auto p : players) {
     for (auto c : p->cells)
       c->velocity = (p->target - c->pos).normalize() * 0.5 * 10;
     p->shoot = false; // TODO
     p->split = false; // TODO
+    top.add(p);
   }
   
   for (auto p : b.getCollisions()) {
@@ -149,8 +177,8 @@ void Game::step() {
       mod.deleted.push_back(c);
       continue;
     }
-    if (c->newMass != c->mass()) {
-      c->mass(c->newMass);
+    if (c->newMass != c->mass) {
+      c->setMass(c->newMass);
       c->updated = true;
     }
   }
@@ -179,7 +207,7 @@ void Game::handleInteraction(Cell *fst, Cell *snd) {
     double dist = (fst->pos - snd->pos).length();
     bool canCollide = dist <= fst->r + snd->r;
     bool canEatD = fst->r - dist - 0.354*snd->r >= -11;
-    bool canEatR = 4*fst->mass() >= 5*snd->mass();
+    bool canEatR = 4*fst->mass >= 5*snd->mass;
 
     auto fstP = dynamic_cast<PlayerCell *>(fst);
     auto sndP = dynamic_cast<PlayerCell *>(snd);

@@ -6,6 +6,8 @@
 #include <iostream>
 struct Player {
   unsigned id;
+
+  unsigned totalMass = 0;
   
   Vec2 target;
   bool shoot = false;

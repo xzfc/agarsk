@@ -74,6 +74,11 @@ int main() {
         b.put<uint32_t>(newCell);
         player->connection->send(b.out);
       }
+
+      if (ticker.iteration % 32 == 0) {
+        Top_(game, b);
+        player->connection->send(b.out);
+      }
     }
   }
 }
