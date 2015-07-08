@@ -125,13 +125,24 @@ FoodCell::FoodCell(Game &game) : Cell(game) {
   type = Type::FOOD;
 }
 
+
+Virus::Virus(Game &game) : Cell(game) {
+  type = Type::VIRUS;
+}
+
+
+Vec2 Game::randomPoint() const {
+  return {drand48()*(size.x1-size.x0) + size.x0,
+        drand48()*(size.y1-size.y0) + size.y0};
+}
+
 void Game::joinPlayer(Player *player) {
     if (player->mode == Player::Mode::GAME) return;
     player->mode = Player::Mode::GAME;
 
     for(auto i = 0; i < 1; i++) {
       auto cell = new PlayerCell(*this, player);
-      cell->pos = {drand48()*1000, drand48()*1000};
+      cell->pos = randomPoint();
       cell->setMass(10);
     }
     players.insert(player);
@@ -141,7 +152,7 @@ void Game::step() {
   unsigned needPellets = size.volume() / 5000;
   for (int i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
     auto cell = new FoodCell(*this);
-    cell->pos = {drand48()*1000, drand48()*1000};
+    cell->pos = randomPoint();
     cell->setMass(1);
   }
   

@@ -67,6 +67,10 @@ struct FoodCell : Cell {
   FoodCell(Game &);
 };
 
+struct Virus : Cell {
+  Virus(Game &);
+};
+
 struct Game {
   Broadphase b;
   Aabb size {-1000,-1000,1000,1000};
@@ -77,6 +81,7 @@ struct Game {
   Modifications mod;
   Top top;
 
+  Vec2 randomPoint() const;
   void joinPlayer(Player *player);
   void step();
   void handleInteraction(Cell *fst, Cell *snd);

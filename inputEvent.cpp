@@ -47,7 +47,7 @@ struct Spawn : InputEvent {
 
   void apply(Game &g) override {
     player->name = name; // TODO: change only on death
-    g.joinPlayer(player);
+    g.joinPlayer(player); // TODO: merge apply and joinPlayer methods
   }
 };
 
