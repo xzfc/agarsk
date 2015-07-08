@@ -46,7 +46,6 @@ struct Spawn : InputEvent {
   { name = b.getU16String(false); }
 
   void apply(Game &g) override {
-    std::cout << "Yay, player joined!\n";
     player->name = name; // TODO: change only on death
     g.joinPlayer(player);
   }
@@ -108,7 +107,14 @@ struct Error : InputEvent {
 void Connect::apply(Game &game) {
   game.players.insert(player);
   BytesOut b;
+  
   FieldSize(game, b);
+  player->connection->send(b.out);
+
+  Reset(game, b);
+  player->connection->send(b.out);
+
+  FullWorld(game, b);
   player->connection->send(b.out);
 }
 

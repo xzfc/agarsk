@@ -59,12 +59,6 @@ int main() {
     game.step();
     
     for (auto player : game.players) {
-      Reset(game, b);
-      player->connection->send(b.out);
-      
-      FullWorld(game, b);
-      player->connection->send(b.out);
-
       ModifyWorld(game, b);
       player->connection->send(b.out);
 
@@ -73,6 +67,7 @@ int main() {
         b.put<uint8_t>(32);
         b.put<uint32_t>(newCell);
         player->connection->send(b.out);
+        player->newCells.clear();
       }
 
       if (ticker.iteration % 32 == 0) {

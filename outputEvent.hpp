@@ -94,9 +94,9 @@ inline void Top_(Game &game, BytesOut &b) {
   for (size_t i = 0; i < game.top.len; i++) {
     CellId minId = 0;
     for (auto cell : game.top.players[i]->cells)
-      if (!minId && minId > cell->id)
+      if (!minId || minId > cell->id)
         minId = cell->id;
-    b.put(4);
+    b.put<uint32_t>(minId);
     b.putString(game.top.players[i]->name);
   }
 }
