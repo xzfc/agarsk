@@ -1,8 +1,6 @@
 *.o
 main
-ws
-bulletTester
-*.svg
 ext
 external
 .clang-complete
+.deps
