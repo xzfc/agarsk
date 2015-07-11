@@ -59,7 +59,6 @@ struct PlayerCell : Cell {
   PlayerCell(Game &, Player *p);
   ~PlayerCell() override;
   void setMass(unsigned) override;
-  PlayerCell *split(Modifications &m, double size);
   void step(Modifications &m) override;
 };
 

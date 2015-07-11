@@ -96,26 +96,29 @@ void PlayerCell::setMass(unsigned mass) {
   Cell::setMass(mass);
 }
 
-PlayerCell *PlayerCell::split(Modifications &m, double size) {
-  if (!player)
-    return nullptr; // TODO split over huge amount of cells
-  if (player->cells.size() >= 16)
-    return nullptr;
-  auto newCell = new PlayerCell(game, player);
-  newCell->pos.x = pos.x + 0.1*(drand48()-0.5);
-  newCell->pos.y = pos.y + 0.1*(drand48()-0.5);
-  newCell->setMass(mass*size);
-  setMass(mass * (1-size));
-  return newCell;
-}
-
 void PlayerCell::step(Modifications &m) {
   Cell::step(m);
-  if (exploded) {
-    PlayerCell *c = this;
-    do {
-      c = c->split(m, 0.5);
-    } while(c);
+  if (exploded && player) {
+    std::vector<PlayerCell *> cells;
+    cells.push_back(this);
+    for (;;) {
+      if (player->cells.size() >= 16)
+        break;
+
+      PlayerCell *smallest = nullptr;
+      for (auto c : cells)
+        if (c->mass >= 2*17.64 && (!smallest || smallest->mass > c->mass))
+          smallest = c;
+      if (!smallest)
+        break;
+
+      auto newCell = new PlayerCell(game, player);
+      newCell->pos.x = smallest->pos.x + 0.1*(drand48()-0.5);
+      newCell->pos.y = smallest->pos.y + 0.1*(drand48()-0.5);
+      newCell->setMass(smallest->mass / 2);
+      smallest->setMass(smallest->mass - newCell->mass);
+      cells.push_back(newCell);
+    }
     exploded = false;
   }
 }
@@ -173,7 +176,7 @@ void Game::step() {
 
   top.reset();
   for (auto p : players) {
-    static double pw = std::log(4.0/11)/std::log(100.);
+    static const double pw = -std::log(3.)/5.;
     for (auto c : p->cells)
       c->velocity = (p->target - c->pos).normalize()
                     * 20 * std::pow(c->mass, pw);

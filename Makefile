@@ -11,7 +11,7 @@ main: bullet.o main.o ws.o game.o inputEvent.o
 #%.o: %.cpp
 #	@printf "%s %s\n" "$<" "$(shell time -f %E ${CXX} ${CXXFLAGS} -c -o $@ $< 2>&1)"
 
-.deps: *.cpp
+.deps: #*.cpp
 	${CXX} ${CXXFLAGS} -MM *.cpp > .deps
 
 -include .deps
