@@ -106,16 +106,12 @@ struct Error : InputEvent {
 
 void Connect::apply(Game &game) {
   game.players.insert(player);
-  BytesOut b;
-  
-  FieldSize(game, b);
-  player->connection->send(b.out);
+  OutputEventBuffer b(game);
 
-  Reset(game, b);
-  player->connection->send(b.out);
-
-  FullWorld(game, b);
-  player->connection->send(b.out);
+  player->connection->send(b._fieldSize());
+  player->connection->send(b._reset());
+  player->connection->send(b._fullWorld());
+  player->connection->send(b._top());
 }
 
 void Disconnect::apply(Game &game) {

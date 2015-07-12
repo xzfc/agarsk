@@ -46,7 +46,7 @@ int main() {
   Game game;
   ws->run();
   std::cout << "Game started!\n";
-  BytesOut b;
+  OutputEventBuffer b(game);
   Ticker ticker(25);
   for (;;) {
     ticker.tick();
@@ -59,21 +59,14 @@ int main() {
     game.step();
     
     for (auto player : game.players) {
-      ModifyWorld(game, b);
-      player->connection->send(b.out);
+      player->connection->send(b._modifyWorld());
 
-      for (auto newCell : player->newCells) {
-        b.clear();
-        b.put<uint8_t>(32);
-        b.put<uint32_t>(newCell);
-        player->connection->send(b.out);
-        player->newCells.clear();
-      }
+      for (auto newCell : player->newCells)
+        player->connection->send(b._ownsBlob(newCell));
+      player->newCells.clear();
 
-      if (ticker.iteration % 32 == 0) {
-        Top_(game, b);
-        player->connection->send(b.out);
-      }
+      if (ticker.iteration % 32 == 0)
+        player->connection->send(b._top());
     }
   }
 }

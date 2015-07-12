@@ -72,7 +72,7 @@ struct Virus : Cell {
 
 struct Game {
   Broadphase b;
-  Aabb size {-1000,-1000,1000,1000};
+  Aabb size {-2000,-2000,2000,2000};
   CellId cellId = 1;
   std::set<Player *> players;
   std::set<Cell *> cells;

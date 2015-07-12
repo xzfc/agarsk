@@ -1,9 +1,10 @@
 #pragma once
 #include <set>
 #include <string>
+#include <vector>
 
 #include "bullet.hpp" // Vec2
-#include <iostream>
+
 struct Player {
   unsigned id;
 
