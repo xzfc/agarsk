@@ -59,14 +59,14 @@ int main() {
     game.step();
     
     for (auto player : game.players) {
-      player->connection->send(b._modifyWorld());
+      player->connection->send(b.modifyWorld());
 
       for (auto newCell : player->newCells)
-        player->connection->send(b._ownsBlob(newCell));
+        player->connection->send(b.ownsBlob(newCell));
       player->newCells.clear();
 
       if (ticker.iteration % 32 == 0)
-        player->connection->send(b._top());
+        player->connection->send(b.top());
     }
   }
 }

@@ -108,10 +108,10 @@ void Connect::apply(Game &game) {
   game.players.insert(player);
   OutputEventBuffer b(game);
 
-  player->connection->send(b._fieldSize());
-  player->connection->send(b._reset());
-  player->connection->send(b._fullWorld());
-  player->connection->send(b._top());
+  player->connection->send(b.fieldSize());
+  player->connection->send(b.reset());
+  player->connection->send(b.fullWorld());
+  player->connection->send(b.top());
 }
 
 void Disconnect::apply(Game &game) {
