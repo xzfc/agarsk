@@ -43,7 +43,7 @@ struct Cell : Item {
   bool updated = false;
   unsigned newMass;
   bool eaten = false;
-  
+
   Cell(Game &);
   virtual ~Cell() {}
   Aabb getAabb() const override;
@@ -72,7 +72,7 @@ struct Virus : Cell {
 
 struct Game {
   Broadphase b;
-  Aabb size {-2000,-2000,2000,2000};
+  Aabb size{-2000, -2000, 2000, 2000};
   CellId cellId = 1;
   std::set<Player *> players;
   std::set<Cell *> cells;

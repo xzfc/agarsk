@@ -12,6 +12,7 @@ struct OutputEventBuffer {
   const std::vector<char> &fullWorld();
   const std::vector<char> &modifyWorld();
   const std::vector<char> &top();
+
  protected:
   Game &game;
   std::vector<char> out;

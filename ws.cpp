@@ -13,7 +13,7 @@ struct WsConnection : IWsConnection {
   pConnection con;
 
   WsConnection(WsServer &, pConnection);
-  
+
   void send(const std::vector<char> &msg) override;
   ~WsConnection() override {}
 };
@@ -30,7 +30,7 @@ struct WsServer : IWsServer {
   std::thread serverThread;
 
   boost::shared_mutex idMutex;
-  std::map<pConnection, Player*> connection2id;
+  std::map<pConnection, Player *> connection2id;
 
   std::mutex inputMutex;
   std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> input;
@@ -42,8 +42,7 @@ struct WsServer : IWsServer {
 };
 
 WsConnection::WsConnection(WsServer &serv, pConnection con)
-    : serv(serv), con(con)
-{}
+    : serv(serv), con(con) {}
 
 void WsConnection::send(const std::vector<char> &msg) {
   std::stringstream ss;
@@ -51,13 +50,11 @@ void WsConnection::send(const std::vector<char> &msg) {
   serv.ws.send(con, ss, nullptr, 130);
 }
 
-WsServer::WsServer(unsigned port)
-    : ws(port, 4 /* threads */)
-{
+WsServer::WsServer(unsigned port) : ws(port, 4 /* threads */) {
   input.reset(new std::vector<std::unique_ptr<InputEvent>>);
-  
+
   auto &endpoint = ws.endpoint["/"];
-  
+
   endpoint.onopen = [&](pConnection connection) {
     auto player = new Player;
     idMutex.lock();
@@ -71,22 +68,25 @@ WsServer::WsServer(unsigned port)
     addInput(ev);
   };
 
-  endpoint.onclose = [&](pConnection connection, int status, const std::string& reason) {
-    idMutex.lock();
-    auto player = connection2id.at(connection);
-    connection2id.erase(connection);
-    idMutex.unlock();
+  endpoint.onclose =
+      [&](pConnection connection, int status, const std::string &reason) {
+        idMutex.lock();
+        auto player = connection2id.at(connection);
+        connection2id.erase(connection);
+        idMutex.unlock();
 
-    std::unique_ptr<InputEvent> ev(new Disconnect);
-    ev->player = player;
-    addInput(ev);
-  };
+        std::unique_ptr<InputEvent> ev(new Disconnect);
+        ev->player = player;
+        addInput(ev);
+      };
 
-  endpoint.onerror = [&](pConnection connection, const boost::system::error_code& ec) {
-    endpoint.onclose(connection, 0, "");
-  };
+  endpoint.onerror =
+      [&](pConnection connection, const boost::system::error_code &ec) {
+        endpoint.onclose(connection, 0, "");
+      };
 
-  endpoint.onmessage = [&](pConnection connection, std::shared_ptr<WS::Message> message) {
+  endpoint.onmessage = [&](pConnection connection,
+                           std::shared_ptr<WS::Message> message) {
     idMutex.lock_shared();
     auto player = connection2id.at(connection);
     idMutex.unlock_shared();
@@ -94,25 +94,25 @@ WsServer::WsServer(unsigned port)
     std::stringstream ss;
     message->data >> ss.rdbuf();
     std::string s = ss.str();
-    
+
     std::unique_ptr<InputEvent> ev(InputEvent::parse(s.c_str(), s.length()));
     ev->player = player;
     addInput(ev);
   };
 }
 
-WsServer::~WsServer() {
-  stop();
-}
+WsServer::~WsServer() { stop(); }
 
 void WsServer::run() {
-  if (running) return;
+  if (running)
+    return;
   running = true;
-  serverThread = std::thread( [&]() { ws.start(); });
+  serverThread = std::thread([&]() { ws.start(); });
 }
 
 void WsServer::stop() {
-  if (!running) return;
+  if (!running)
+    return;
   running = false;
   ws.stop();
   serverThread.join();
@@ -126,6 +126,4 @@ std::unique_ptr<std::vector<std::unique_ptr<InputEvent>>> WsServer::getInput() {
   return result;
 }
 
-IWsServer *wsServer(unsigned port) {
-  return new WsServer(port);
-}
+IWsServer *wsServer(unsigned port) { return new WsServer(port); }

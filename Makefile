@@ -16,6 +16,9 @@ main: bullet.o main.o ws.o game.o inputEvent.o outputEvent.o
 
 -include .deps
 
+reformat:
+	clang-format -i *.cpp *.hpp
+
 clean:
 	rm -rf main *.o .deps .clang-complete
 

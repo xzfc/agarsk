@@ -7,9 +7,8 @@
 namespace {
 struct Helper {
   std::vector<char> &out;
-  
-  Helper(std::vector<char> &out, uint8_t opcode)
-      : out(out) {
+
+  Helper(std::vector<char> &out, uint8_t opcode) : out(out) {
     out.clear();
     out.push_back(opcode);
   }
@@ -23,7 +22,7 @@ struct Helper {
   }
 
   void string(const std::u16string str) {
-    for (auto c: str)
+    for (auto c : str)
       scalar<uint16_t>(c);
     scalar<int16_t>(0);
   }
@@ -33,18 +32,16 @@ struct Helper {
     scalar<int32_t>(c->pos.x);
     scalar<int32_t>(c->pos.y);
     scalar<int16_t>(c->r);
-    scalar<uint8_t>(c->color >>  0 & 0xFF);
-    scalar<uint8_t>(c->color >>  8 & 0xFF);
+    scalar<uint8_t>(c->color >> 0 & 0xFF);
+    scalar<uint8_t>(c->color >> 8 & 0xFF);
     scalar<uint8_t>(c->color >> 16 & 0xFF);
-    scalar<uint8_t>(c->type == Cell::VIRUS?1:0);
+    scalar<uint8_t>(c->type == Cell::VIRUS ? 1 : 0);
     string(c->name);
   }
 };
 }
 
-OutputEventBuffer::OutputEventBuffer(Game &game)
-    : game(game) {
-}
+OutputEventBuffer::OutputEventBuffer(Game &game) : game(game) {}
 
 const std::vector<char> &OutputEventBuffer::fieldSize() {
   Helper b(out, 64);
@@ -68,13 +65,13 @@ const std::vector<char> &OutputEventBuffer::ownsBlob(uint32_t newCell) {
 
 const std::vector<char> &OutputEventBuffer::fullWorld() {
   Helper b(out, 16);
-  
+
   b.scalar<uint16_t>(0);
-  
+
   for (auto &c : game.cells)
     b.cell(c);
   b.scalar<uint32_t>(0);
-  
+
   b.scalar<uint32_t>(0);
 
   return out;
@@ -94,7 +91,7 @@ const std::vector<char> &OutputEventBuffer::modifyWorld() {
       b.cell(c);
 
   b.scalar<uint32_t>(0);
-  
+
   b.scalar<uint32_t>(0);
 
   return out;
@@ -102,8 +99,8 @@ const std::vector<char> &OutputEventBuffer::modifyWorld() {
 
 const std::vector<char> &OutputEventBuffer::top() {
   Helper b(out, 49);
-  
-  b.scalar<uint32_t> (game.top.len);
+
+  b.scalar<uint32_t>(game.top.len);
   for (size_t i = 0; i < game.top.len; i++) {
     CellId minId = 0;
     for (auto cell : game.top.players[i]->cells)

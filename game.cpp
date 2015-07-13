@@ -4,22 +4,20 @@
 
 static uint32_t randomColor() {
   constexpr uint8_t a = 7, b = 255;
-  uint32_t yoba = drand48() * (6 * (b-a+1));
-  uint32_t x = yoba % (b-a+1);
-  switch (yoba / (b-a+1)) {
-    case 0: return a <<16 | b <<8 | x;
-    case 1: return a <<16 | x <<8 | b;
-    case 2: return b <<16 | a <<8 | x;
-    case 3: return b <<16 | x <<8 | a;
-    case 4: return x <<16 | a <<8 | b;
-    case 5: return x <<16 | b <<8 | a;
+  uint32_t yoba = drand48() * (6 * (b - a + 1));
+  uint32_t x = yoba % (b - a + 1);
+  switch (yoba / (b - a + 1)) {
+    case 0: return a << 16 | b << 8 | x;
+    case 1: return a << 16 | x << 8 | b;
+    case 2: return b << 16 | a << 8 | x;
+    case 3: return b << 16 | x << 8 | a;
+    case 4: return x << 16 | a << 8 | b;
+    case 5: return x << 16 | b << 8 | a;
   }
   return 0xFFFFFF;
 }
 
-void Top::reset() {
-  len = 0;
-}
+void Top::reset() { len = 0; }
 
 void Top::add(Player *p) {
   if (p->cells.empty())
@@ -32,8 +30,8 @@ void Top::add(Player *p) {
     return;
   if (len < maxlen)
     len++;
-  for (unsigned i = len-1; i > pos; i--)
-    players[i] = players[i-1];
+  for (unsigned i = len - 1; i > pos; i--)
+    players[i] = players[i - 1];
   players[pos] = p;
 }
 
@@ -52,11 +50,11 @@ void Cell::setMass(unsigned mass) {
 }
 
 Aabb Cell::getAabb() const {
-  return {pos.x-r, pos.y-r, pos.x+r, pos.y+r};
+  return {pos.x - r, pos.y - r, pos.x + r, pos.y + r};
 }
 
 Aabb Cell::getPotentialAabb() const {
-    return type == Type::PELLET ? getAabb() : getAabb().expand(3);
+  return type == Type::PELLET ? getAabb() : getAabb().expand(3);
 }
 
 void Cell::svg(Svg &s) const {
@@ -66,13 +64,12 @@ void Cell::svg(Svg &s) const {
 void Cell::step(Modifications &) {
   eaten = updated = false;
   newMass = mass;
-  if (velocity != Vec2 {0,0}) {
+  if (velocity != Vec2{0, 0}) {
     pos += velocity;
-    velocity *= 0.9; // TODO: set zero if small
+    velocity *= 0.9;  // TODO: set zero if small
     updated = true;
   }
 }
-
 
 PlayerCell::PlayerCell(Game &game, Player *p) : Cell(game) {
   player = p;
@@ -107,14 +104,14 @@ void PlayerCell::step(Modifications &m) {
 
       PlayerCell *smallest = nullptr;
       for (auto c : cells)
-        if (c->mass >= 2*17.64 && (!smallest || smallest->mass > c->mass))
+        if (c->mass >= 2 * 17.64 && (!smallest || smallest->mass > c->mass))
           smallest = c;
       if (!smallest)
         break;
 
       auto newCell = new PlayerCell(game, player);
-      newCell->pos.x = smallest->pos.x + 0.1*(drand48()-0.5);
-      newCell->pos.y = smallest->pos.y + 0.1*(drand48()-0.5);
+      newCell->pos.x = smallest->pos.x + 0.1 * (drand48() - 0.5);
+      newCell->pos.y = smallest->pos.y + 0.1 * (drand48() - 0.5);
       newCell->setMass(smallest->mass / 2);
       smallest->setMass(smallest->mass - newCell->mass);
       cells.push_back(newCell);
@@ -123,11 +120,7 @@ void PlayerCell::step(Modifications &m) {
   }
 }
 
-
-FoodCell::FoodCell(Game &game) : Cell(game) {
-  type = Type::FOOD;
-}
-
+FoodCell::FoodCell(Game &game) : Cell(game) { type = Type::FOOD; }
 
 Virus::Virus(Game &game) : Cell(game) {
   type = Type::VIRUS;
@@ -135,22 +128,22 @@ Virus::Virus(Game &game) : Cell(game) {
   setMass(100);
 }
 
-
 Vec2 Game::randomPoint() const {
-  return {drand48()*(size.x1-size.x0) + size.x0,
-        drand48()*(size.y1-size.y0) + size.y0};
+  return {drand48() * (size.x1 - size.x0) + size.x0,
+          drand48() * (size.y1 - size.y0) + size.y0};
 }
 
 void Game::joinPlayer(Player *player) {
-    if (player->mode == Player::Mode::GAME) return;
-    player->mode = Player::Mode::GAME;
+  if (player->mode == Player::Mode::GAME)
+    return;
+  player->mode = Player::Mode::GAME;
 
-    for(auto i = 0; i < 1; i++) {
-      auto cell = new PlayerCell(*this, player);
-      cell->pos = randomPoint();
-      cell->setMass(10);
-    }
-    players.insert(player);
+  for (auto i = 0; i < 1; i++) {
+    auto cell = new PlayerCell(*this, player);
+    cell->pos = randomPoint();
+    cell->setMass(10);
+  }
+  players.insert(player);
 }
 
 void Game::step() {
@@ -160,32 +153,32 @@ void Game::step() {
     cell->pos = randomPoint();
     cell->setMass(1);
   }
-  
+
   unsigned needViruses = size.volume() / 500000;
   for (unsigned i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
     auto cell = new Virus(*this);
     cell->pos = randomPoint();
   }
-  
+
   mod.eaten.clear();
-  
+
   for (auto c : cells)
     c->step(mod);
 
   top.reset();
   for (auto p : players) {
-    static const double pw = -std::log(3.)/5.;
+    static const double pw = -std::log(3.) / 5.;
     for (auto c : p->cells)
-      c->velocity = (p->target - c->pos).normalize()
-                    * 20 * std::pow(c->mass, pw);
-    p->shoot = false; // TODO
-    p->split = false; // TODO
+      c->velocity =
+          (p->target - c->pos).normalize() * 20 * std::pow(c->mass, pw);
+    p->shoot = false;  // TODO
+    p->split = false;  // TODO
     top.add(p);
   }
-  
+
   for (auto p : b.getCollisions()) {
-    Cell *fstCell = dynamic_cast<Cell*>(p.first),
-         *sndCell = dynamic_cast<Cell*>(p.second);
+    Cell *fstCell = dynamic_cast<Cell *>(p.first),
+         *sndCell = dynamic_cast<Cell *>(p.second);
     if (fstCell && sndCell) {
       if (fstCell->r < sndCell->r)
         std::swap(fstCell, sndCell);
@@ -211,7 +204,7 @@ void Game::step() {
     delete c;
   }
   mod.deleted.clear();
-  
+
   for (auto c : mod.added) {
     cellCountByType[c->type]++;
     cells.insert(c);
@@ -221,73 +214,72 @@ void Game::step() {
 }
 
 void Game::handleInteraction(Cell *fst, Cell *snd) {
-    bool actionEat = false;
-    bool actionCollide = false;
-    bool actionExplode = false;
+  bool actionEat = false;
+  bool actionCollide = false;
+  bool actionExplode = false;
 
-    double dist = (fst->pos - snd->pos).length();
-    bool canCollide = dist <= fst->r + snd->r;
-    bool canEatD = fst->r - dist - 0.354*snd->r >= -11;
-    bool canEatR = 4*fst->mass >= 5*snd->mass;
+  double dist = (fst->pos - snd->pos).length();
+  bool canCollide = dist <= fst->r + snd->r;
+  bool canEatD = fst->r - dist - 0.354 * snd->r >= -11;
+  bool canEatR = 4 * fst->mass >= 5 * snd->mass;
 
-    auto fstP = dynamic_cast<PlayerCell *>(fst);
-    auto sndP = dynamic_cast<PlayerCell *>(snd);
+  auto fstP = dynamic_cast<PlayerCell *>(fst);
+  auto sndP = dynamic_cast<PlayerCell *>(snd);
 
-    if (fstP) {
-        if (sndP && fstP->player == sndP->player) {
-            bool canMerge = false; // TODO
-            if (!canMerge && canCollide)
-                actionCollide = true;
-            else if (canMerge && canEatD)
-                actionEat = true;
-        } else if (snd->type == Cell::Type::FOOD && canEatD) {
-            actionEat = true;
-            //if (fst->mass() > 20)
-            //  actionExplode = true;
-        } else if (canEatD && canEatR) {
-            actionEat = true;
-            if (snd->type == Cell::Type::VIRUS)
-                actionExplode = true;
-        }
-    } else if (fst->type == Cell::Type::VIRUS &&
-               snd->type == Cell::Type::FOOD &&
-               canEatD) {
+  if (fstP) {
+    if (sndP && fstP->player == sndP->player) {
+      bool canMerge = false;  // TODO
+      if (!canMerge && canCollide)
+        actionCollide = true;
+      else if (canMerge && canEatD)
         actionEat = true;
-        // TODO: split virus
+    } else if (snd->type == Cell::Type::FOOD && canEatD) {
+      actionEat = true;
+      // if (fst->mass() > 20)
+      //  actionExplode = true;
+    } else if (canEatD && canEatR) {
+      actionEat = true;
+      if (snd->type == Cell::Type::VIRUS)
+        actionExplode = true;
     }
+  } else if (fst->type == Cell::Type::VIRUS && snd->type == Cell::Type::FOOD &&
+             canEatD) {
+    actionEat = true;
+    // TODO: split virus
+  }
 
-    if (actionEat && !fst->eaten && !snd->eaten) {
-        snd->eaten = true;
-        fst->newMass += snd->newMass;
-        mod.eaten.push_back({fst->id, snd->id});
-    }
+  if (actionEat && !fst->eaten && !snd->eaten) {
+    snd->eaten = true;
+    fst->newMass += snd->newMass;
+    mod.eaten.push_back({fst->id, snd->id});
+  }
 
-    if (actionCollide) {
-        auto diff = (fst->pos-snd->pos);
-        auto vec = diff.normalize() * (-diff.length()+fst->r+snd->r) * 0.1;
-        fst->velocity += vec;
-        snd->velocity -= vec;
-    }
+  if (actionCollide) {
+    auto diff = (fst->pos - snd->pos);
+    auto vec = diff.normalize() * (-diff.length() + fst->r + snd->r) * 0.1;
+    fst->velocity += vec;
+    snd->velocity -= vec;
+  }
 
-    if (fstP && actionExplode && !fst->eaten)
-        fstP->exploded = true;
+  if (fstP && actionExplode && !fst->eaten)
+    fstP->exploded = true;
 }
 
 void Game::stop() {
-    for (auto c: cells) {
-        b.remove(c);
-        delete c;
-    }
-    cells.clear();
-    /*
-    for (auto p: players)
-      delete p;
-    */
-    players.clear();
+  for (auto c : cells) {
+    b.remove(c);
+    delete c;
+  }
+  cells.clear();
+  /*
+  for (auto p: players)
+    delete p;
+  */
+  players.clear();
 }
 
 void Game::svg(const char *fname) {
-    Svg svg(fname, {-100,-100,1000,1000}, 512, 512);
-    for (Cell *c : cells)
-        c->svg(svg);
+  Svg svg(fname, {-100, -100, 1000, 1000}, 512, 512);
+  for (Cell *c : cells)
+    c->svg(svg);
 }

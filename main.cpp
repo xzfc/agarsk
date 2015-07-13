@@ -21,7 +21,8 @@ struct Ticker {
 Ticker::Ticker(unsigned tpsTarget) {
   iteration = 0;
   using namespace std::literals::chrono_literals;
-  period = 1s; period /= tpsTarget;
+  period = 1s;
+  period /= tpsTarget;
 }
 
 bool Ticker::tick() {
@@ -31,11 +32,11 @@ bool Ticker::tick() {
     iteration++;
   } else {
     auto fromStart = clock_t::now() - start;
-    if (fromStart / period < iteration-1) {
+    if (fromStart / period < iteration - 1) {
       iteration++;
       return true;
     }
-    auto nextIterTime = (iteration++)*period;
+    auto nextIterTime = (iteration++) * period;
     std::this_thread::sleep_for(nextIterTime - fromStart);
   }
   return false;
@@ -52,12 +53,12 @@ int main() {
     ticker.tick();
     {
       auto input = ws->getInput();
-      for (auto & event : *input)
+      for (auto& event : *input)
         event->apply(game);
     }
 
     game.step();
-    
+
     for (auto player : game.players) {
       player->connection->send(b.modifyWorld());
 
