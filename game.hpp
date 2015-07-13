@@ -12,8 +12,8 @@ typedef uint32_t CellId;
 
 struct Modifications {
   std::vector<std::pair<CellId, CellId>> eaten;
-  std::vector<Cell *> deleted;
   std::vector<Cell *> added;
+  std::set<Cell *> updated;
 };
 
 struct Top {
@@ -72,10 +72,12 @@ struct Virus : Cell {
 
 struct Game {
   Broadphase b;
-  Aabb size{-2000, -2000, 2000, 2000};
+  Aabb size{-20000, -20000, 20000, 20000};
   CellId cellId = 1;
   std::set<Player *> players;
   std::set<Cell *> cells;
+  std::set<Cell *> inactiveCells;
+  std::set<Cell *> updated;
   unsigned cellCountByType[Cell::Type::size] = {0};
   Modifications mod;
   Top top;

@@ -95,6 +95,10 @@ const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
     if (visibleNew.count(c->id) && (c->updated || !visibleOld.count(c->id)))
       b.cell(c);
 
+  for (auto &c : game.inactiveCells)
+    if (visibleNew.count(c->id) && !visibleOld.count(c->id))
+      b.cell(c);
+
   b.scalar<uint32_t>(0);
 
   std::vector<uint32_t> visibleRemoved;

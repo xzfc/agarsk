@@ -45,7 +45,7 @@ Cell::Cell(Game &game) : game(game) {
 }
 
 void Cell::setMass(unsigned mass) {
-  this->mass = mass;
+  newMass = this->mass = mass;
   r = 10. * sqrt((double)mass);
 }
 
@@ -54,7 +54,7 @@ Aabb Cell::getAabb() const {
 }
 
 Aabb Cell::getPotentialAabb() const {
-  return type == Type::PELLET ? getAabb() : getAabb().expand(3);
+  return (type == Type::PELLET || type == Type::FOOD) ? getAabb() : getAabb().expand(3);
 }
 
 void Cell::svg(Svg &s) const {
@@ -120,7 +120,7 @@ void PlayerCell::step(Modifications &m) {
   }
 }
 
-FoodCell::FoodCell(Game &game) : Cell(game) { type = Type::FOOD; }
+FoodCell::FoodCell(Game &game) : Cell(game) { type = Type::FOOD; active = false; }
 
 Virus::Virus(Game &game) : Cell(game) {
   type = Type::VIRUS;
@@ -145,22 +145,23 @@ void Game::joinPlayer(Player *player) {
   }
   players.insert(player);
 }
-
+#include <iostream>
 void Game::step() {
-  unsigned needPellets = size.volume() / 5000;
+  unsigned needPellets = size.volume() / 50000;
   for (unsigned i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
     auto cell = new FoodCell(*this);
     cell->pos = randomPoint();
     cell->setMass(1);
   }
 
-  unsigned needViruses = size.volume() / 500000;
+  unsigned needViruses = size.volume() / 5000000;
   for (unsigned i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
     auto cell = new Virus(*this);
     cell->pos = randomPoint();
   }
 
   mod.eaten.clear();
+  mod.updated.clear();
 
   for (auto c : cells)
     c->step(mod);
@@ -190,7 +191,7 @@ void Game::step() {
     }
     if (first)
       continue;
-    range = range.expand(3000);
+    range = range.expand(1000);
     p->visibleSwap = !p->visibleSwap;
     std::set<uint32_t> &newVisible = p->visibleSwap ? p->visible1 : p->visible0;
     newVisible.clear();
@@ -208,9 +209,15 @@ void Game::step() {
     }
   }
 
-  for (auto c : cells) {
+  for (auto c : mod.updated) {
     if (c->eaten) {
-      mod.deleted.push_back(c);
+      cellCountByType[c->type]--;
+      b.remove(c);
+      if (c->active)
+        cells.erase(c);
+      else
+        inactiveCells.erase(c);
+      delete c;
       continue;
     }
     if (c->newMass != c->mass) {
@@ -219,17 +226,12 @@ void Game::step() {
     }
   }
 
-  for (auto c : mod.deleted) {
-    cellCountByType[c->type]--;
-    b.remove(c);
-    cells.erase(c);
-    delete c;
-  }
-  mod.deleted.clear();
-
   for (auto c : mod.added) {
     cellCountByType[c->type]++;
-    cells.insert(c);
+    if (c->active)
+      cells.insert(c);
+    else
+      inactiveCells.insert(c);
     b.add(c);
   }
   mod.added.clear();
@@ -273,6 +275,8 @@ void Game::handleInteraction(Cell *fst, Cell *snd) {
   if (actionEat && !fst->eaten && !snd->eaten) {
     snd->eaten = true;
     fst->newMass += snd->newMass;
+    mod.updated.insert(fst);
+    mod.updated.insert(snd);
     mod.eaten.push_back({fst->id, snd->id});
   }
 

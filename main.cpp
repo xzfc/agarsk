@@ -57,7 +57,10 @@ int main() {
         event->apply(game);
     }
 
+    auto t0 = std::chrono::steady_clock::now();
     game.step();
+    auto t1 = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::duration<double>>(t1-t0).count() << "\n";
 
     for (auto player : game.players) {
       player->connection->send(b.modifyWorld(player));

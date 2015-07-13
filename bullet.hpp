@@ -58,6 +58,16 @@ struct Aabb {
             std::max(y1, o.y1)};
   }
 
+  //! Intersect: `a & b` is maximal Aabb that contained inside both `a` and `b`.
+  //! If there are no such Aabb, then Aabb with zero volume returned.
+  Aabb operator&(const Aabb &o) const {
+    Aabb r {std::max(x0, o.x0), std::max(y0, o.y0),
+            std::min(x1, o.x1), std::min(y1, o.y1)};
+    if (r.x0 >= r.x1) r.x1 = r.x0;
+    if (r.y0 >= r.y1) r.y1 = r.y0;
+    return r;
+  }
+
   //! Check intersection: `a && b` is true if `a` and `b` have common points
   bool operator&&(const Aabb &o) const {
     return std::max(x0, o.x0) <= std::min(x1, o.x1) &&
@@ -79,6 +89,7 @@ struct Broadphase;
 struct Item {
   virtual Aabb getAabb() const = 0;
   virtual Aabb getPotentialAabb() const { return getAabb(); }
+  bool active = true;
 
  private:
   Node *node;
@@ -97,7 +108,8 @@ struct Broadphase {
   const std::vector<Item *> &getItemsInRange(Aabb);
 
  private:
-  Node *root;
+  Node *activeRoot;
+  Node *inactiveRoot;
   std::vector<std::pair<Item *, Item *>> pairs;
   std::vector<Item *> singles;
   std::vector<Node *> invalidNodes;

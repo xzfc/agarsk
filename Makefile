@@ -8,9 +8,6 @@ main: bullet.o main.o ws.o game.o inputEvent.o outputEvent.o
 .clang-complete:
 	printf "%s\n" "-stdlib=libc++ ${CXXFLAGS}" > $@
 
-#%.o: %.cpp
-#	@printf "%s %s\n" "$<" "$(shell time -f %E ${CXX} ${CXXFLAGS} -c -o $@ $< 2>&1)"
-
 .deps: #*.cpp
 	${CXX} ${CXXFLAGS} -MM *.cpp > .deps
 
