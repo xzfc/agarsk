@@ -30,8 +30,8 @@ struct Helper {
 
   void cell(Cell *c) {
     scalar<uint32_t>(c->id);
-    scalar<int16_t>(c->pos.x);
-    scalar<int16_t>(c->pos.y);
+    scalar<int32_t>(c->pos.x);
+    scalar<int32_t>(c->pos.y);
     scalar<int16_t>(c->r);
     scalar<uint8_t>(c->color >>  0 & 0xFF);
     scalar<uint8_t>(c->color >>  8 & 0xFF);
