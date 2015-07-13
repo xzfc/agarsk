@@ -60,7 +60,7 @@ int main() {
     game.step();
 
     for (auto player : game.players) {
-      player->connection->send(b.modifyWorld());
+      player->connection->send(b.modifyWorld(player));
 
       for (auto newCell : player->newCells)
         player->connection->send(b.ownsBlob(newCell));

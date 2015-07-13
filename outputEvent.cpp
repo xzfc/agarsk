@@ -65,6 +65,7 @@ const std::vector<char> &OutputEventBuffer::ownsBlob(uint32_t newCell) {
 
 const std::vector<char> &OutputEventBuffer::fullWorld() {
   Helper b(out, 16);
+  return out;
 
   b.scalar<uint16_t>(0);
 
@@ -77,7 +78,7 @@ const std::vector<char> &OutputEventBuffer::fullWorld() {
   return out;
 };
 
-const std::vector<char> &OutputEventBuffer::modifyWorld() {
+const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
   Helper b(out, 16);
 
   b.scalar<uint16_t>(game.mod.eaten.size());
@@ -86,13 +87,23 @@ const std::vector<char> &OutputEventBuffer::modifyWorld() {
     b.scalar<uint32_t>(e.second);
   }
 
+  const std::set<uint32_t>
+      &visibleOld = p->visibleSwap ? p->visible0 : p->visible1,
+      &visibleNew = p->visibleSwap ? p->visible1 : p->visible0;
+
   for (auto &c : game.cells)
-    if (c->updated && !c->eaten)
+    if (visibleNew.count(c->id) && (c->updated || !visibleOld.count(c->id)))
       b.cell(c);
 
   b.scalar<uint32_t>(0);
 
-  b.scalar<uint32_t>(0);
+  std::vector<uint32_t> visibleRemoved;
+  std::set_difference(visibleOld.begin(), visibleOld.end(),
+                      visibleNew.begin(), visibleNew.end(),
+                      std::inserter(visibleRemoved, visibleRemoved.begin()));
+  b.scalar<uint32_t>(visibleRemoved.size());
+  for (auto i : visibleRemoved)
+    b.scalar<uint32_t>(i);
 
   return out;
 }

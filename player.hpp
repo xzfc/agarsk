@@ -19,6 +19,11 @@ struct Player {
   std::u16string name;
 
   std::vector<uint32_t> newCells;
+  // If visibleSwap is false, then visible0 represents current frame, and
+  // visible1 represents previous. If visibleSwap is true, roles of visible0
+  // and visible1 is swapped.
+  bool visibleSwap = false;
+  std::set<uint32_t> visible0, visible1;
 
   struct IWsConnection *connection;
 };

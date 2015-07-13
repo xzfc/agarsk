@@ -1,6 +1,6 @@
 #include "bullet.hpp"
 
-#include <iostream>
+#include <functional>
 
 struct Node {
   Node *parent;
@@ -73,17 +73,7 @@ void Broadphase::remove(Item *item) {
   item->node = nullptr;
 }
 
-const std::vector<std::pair<Item *, Item *>> &Broadphase::getCollisions() {
-  updateTree();
-  calcPairs();
-  return pairs;
-}
-
-//
-// Broadphase protected methods
-//
-
-void Broadphase::updateTree() {
+void Broadphase::update() {
   if (!root)
     return;
 
@@ -104,6 +94,32 @@ void Broadphase::updateTree() {
     addNode(node, root);
   }
 }
+
+const std::vector<std::pair<Item *, Item *>> &Broadphase::getCollisions() {
+  calcPairs();
+  return pairs;
+}
+
+const std::vector<Item *> &Broadphase::getItemsInRange(Aabb aabb) {
+  singles.clear();
+  std::function<void(Node *)> run = [&](Node *node) {
+    if (node->isLeaf()) {
+      if (node->item->getAabb() && aabb)
+        singles.push_back(node->item);
+    } else {
+      if (node->aabb && aabb) {
+        run(node->child[0]);
+        run(node->child[1]);
+      }
+    }
+  };
+  run(root);
+  return singles;
+}
+
+//
+// Broadphase protected methods
+//
 
 void Broadphase::calcPairs() {
   pairs.clear();

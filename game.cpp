@@ -176,6 +176,28 @@ void Game::step() {
     top.add(p);
   }
 
+  b.update();
+
+  for (auto p : players) {
+    Aabb range;
+    bool first = true;
+    for (auto c : p->cells) {
+      if (first)
+        range = c->getAabb();
+      else
+        range = range | c->getAabb();
+      first = false;
+    }
+    if (first)
+      continue;
+    range = range.expand(3000);
+    p->visibleSwap = !p->visibleSwap;
+    std::set<uint32_t> &newVisible = p->visibleSwap ? p->visible1 : p->visible0;
+    newVisible.clear();
+    for (auto c : b.getItemsInRange(range))
+      newVisible.insert(static_cast<Cell *>(c)->id);
+  }
+
   for (auto p : b.getCollisions()) {
     Cell *fstCell = dynamic_cast<Cell *>(p.first),
          *sndCell = dynamic_cast<Cell *>(p.second);
