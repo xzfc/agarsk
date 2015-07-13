@@ -12,7 +12,7 @@ struct Ticker {
   double ticksPerSecond();
 
   typedef std::chrono::steady_clock clock_t;
-  unsigned long iteration;
+  std::intmax_t iteration;
   bool first;
   clock_t::duration period;
   clock_t::time_point start;

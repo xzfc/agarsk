@@ -168,7 +168,6 @@ void Broadphase::addNode(Node *node, Node *&parent) {
 }
 
 void Broadphase::removeNode(Node *node) {
-  if (!node->isLeaf()) { int * a = nullptr;a = 0; }
   if (!node->parent) {
     root = nullptr;
     return;

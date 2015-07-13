@@ -155,24 +155,22 @@ void Game::joinPlayer(Player *player) {
 
 void Game::step() {
   unsigned needPellets = size.volume() / 5000;
-  for (int i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
+  for (unsigned i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
     auto cell = new FoodCell(*this);
     cell->pos = randomPoint();
     cell->setMass(1);
   }
   
   unsigned needViruses = size.volume() / 500000;
-  for (int i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
+  for (unsigned i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
     auto cell = new Virus(*this);
     cell->pos = randomPoint();
   }
   
   mod.eaten.clear();
   
-  unsigned pelletCount = 0;
-  for (auto c : cells) {
+  for (auto c : cells)
     c->step(mod);
-  }
 
   top.reset();
   for (auto p : players) {

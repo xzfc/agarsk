@@ -4,6 +4,7 @@
 struct InputEvent {  
   struct Player *player = 0;
   virtual void apply(struct Game&) {}
+  virtual ~InputEvent() {}
   static InputEvent *parse(const char *, size_t);
 };
 

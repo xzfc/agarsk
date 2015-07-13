@@ -22,7 +22,7 @@ struct BytesIn {
       unsigned char data[sizeof(T)];
       T result;
     };
-    for (int i = 0; i<sizeof(T); i++)
+    for (size_t i = 0; i < sizeof(T); i++)
       data[i] = getByte();
     return result;
   }
