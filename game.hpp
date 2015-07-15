@@ -1,5 +1,5 @@
 #pragma once
-#include <mutex>
+#include <random>
 
 #include "bullet.hpp"
 #include "player.hpp"
@@ -62,26 +62,31 @@ struct PlayerCell : Cell {
   void step(Modifications &m) override;
 };
 
-struct FoodCell : Cell {
-  FoodCell(Game &);
-};
-
 struct Virus : Cell {
   Virus(Game &);
 };
 
+struct Pellet : Cell {
+  Pellet(Game &);
+};
+
+struct FoodCell : Cell {
+  FoodCell(Game &);
+};
+
 struct Game {
   Broadphase b;
-  Aabb size{-20000, -20000, 20000, 20000};
-  CellId cellId = 1;
+  Aabb size;
+  CellId cellId;
   std::set<Player *> players;
   std::set<Cell *> cells;
   std::set<Cell *> inactiveCells;
-  std::set<Cell *> updated;
   unsigned cellCountByType[Cell::Type::size] = {0};
   Modifications mod;
   Top top;
+  std::random_device rd;
 
+  Game();
   Vec2 randomPoint() const;
   void joinPlayer(Player *player);
   void step();

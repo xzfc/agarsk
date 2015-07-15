@@ -23,7 +23,7 @@ struct Player {
   // visible1 represents previous. If visibleSwap is true, roles of visible0
   // and visible1 is swapped.
   bool visibleSwap = false;
-  std::set<uint32_t> visible0, visible1;
+  std::set<struct Cell *> visible0, visible1;
 
   struct IWsConnection *connection;
 };

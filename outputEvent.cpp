@@ -87,27 +87,23 @@ const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
     b.scalar<uint32_t>(e.second);
   }
 
-  const std::set<uint32_t>
+  const std::set<Cell *>
       &visibleOld = p->visibleSwap ? p->visible0 : p->visible1,
       &visibleNew = p->visibleSwap ? p->visible1 : p->visible0;
 
-  for (auto &c : game.cells)
-    if (visibleNew.count(c->id) && (c->updated || !visibleOld.count(c->id)))
-      b.cell(c);
-
-  for (auto &c : game.inactiveCells)
-    if (visibleNew.count(c->id) && !visibleOld.count(c->id))
+  for (auto c : visibleNew)
+    if (c->updated || !visibleOld.count(c))
       b.cell(c);
 
   b.scalar<uint32_t>(0);
 
-  std::vector<uint32_t> visibleRemoved;
+  std::vector<Cell *> visibleRemoved;
   std::set_difference(visibleOld.begin(), visibleOld.end(),
                       visibleNew.begin(), visibleNew.end(),
                       std::inserter(visibleRemoved, visibleRemoved.begin()));
   b.scalar<uint32_t>(visibleRemoved.size());
-  for (auto i : visibleRemoved)
-    b.scalar<uint32_t>(i);
+  for (auto c : visibleRemoved)
+    b.scalar<uint32_t>(c->id);
 
   return out;
 }

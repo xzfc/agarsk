@@ -2,9 +2,10 @@
 
 #include "svg.hpp"
 
-static uint32_t randomColor() {
+static uint32_t randomColor(std::random_device &rd) {
   constexpr uint8_t a = 7, b = 255;
-  uint32_t yoba = drand48() * (6 * (b - a + 1));
+  auto yoba = std::uniform_int_distribution<uint32_t>(0, 6 * (b - a + 1))(rd);
+
   uint32_t x = yoba % (b - a + 1);
   switch (yoba / (b - a + 1)) {
     case 0: return a << 16 | b << 8 | x;
@@ -37,7 +38,7 @@ void Top::add(Player *p) {
 
 Cell::Cell(Game &game) : game(game) {
   id = game.cellId++;
-  color = randomColor();
+  color = randomColor(game.rd);
 
   eaten = false;
   updated = true;
@@ -112,6 +113,7 @@ void PlayerCell::step(Modifications &m) {
       auto newCell = new PlayerCell(game, player);
       newCell->pos.x = smallest->pos.x + 0.1 * (drand48() - 0.5);
       newCell->pos.y = smallest->pos.y + 0.1 * (drand48() - 0.5);
+      newCell->color = smallest->color;
       newCell->setMass(smallest->mass / 2);
       smallest->setMass(smallest->mass - newCell->mass);
       cells.push_back(newCell);
@@ -120,12 +122,29 @@ void PlayerCell::step(Modifications &m) {
   }
 }
 
-FoodCell::FoodCell(Game &game) : Cell(game) { type = Type::FOOD; active = false; }
-
 Virus::Virus(Game &game) : Cell(game) {
   type = Type::VIRUS;
   color = 0x33ff33;
   setMass(100);
+  active = false;
+}
+
+Game::Game()
+    : size {-5000, -5000, 5000, 5000}
+    , cellId {1}
+    , cellCountByType {0}
+{
+  
+}
+
+Pellet::Pellet(Game &game) : Cell(game) {
+  type = Type::PELLET;
+  active = false;
+}
+
+FoodCell::FoodCell(Game &game) : Cell(game) {
+  type = Type::FOOD;
+  active = false;
 }
 
 Vec2 Game::randomPoint() const {
@@ -145,11 +164,11 @@ void Game::joinPlayer(Player *player) {
   }
   players.insert(player);
 }
-#include <iostream>
+
 void Game::step() {
-  unsigned needPellets = size.volume() / 50000;
-  for (unsigned i = cellCountByType[Cell::FOOD]; i < needPellets; i++) {
-    auto cell = new FoodCell(*this);
+  unsigned needPellets = size.volume() / 5000;
+  for (unsigned i = cellCountByType[Cell::PELLET]; i < needPellets; i++) {
+    auto cell = new Pellet(*this);
     cell->pos = randomPoint();
     cell->setMass(1);
   }
@@ -178,26 +197,6 @@ void Game::step() {
   }
 
   b.update();
-
-  for (auto p : players) {
-    Aabb range;
-    bool first = true;
-    for (auto c : p->cells) {
-      if (first)
-        range = c->getAabb();
-      else
-        range = range | c->getAabb();
-      first = false;
-    }
-    if (first)
-      continue;
-    range = range.expand(1000);
-    p->visibleSwap = !p->visibleSwap;
-    std::set<uint32_t> &newVisible = p->visibleSwap ? p->visible1 : p->visible0;
-    newVisible.clear();
-    for (auto c : b.getItemsInRange(range))
-      newVisible.insert(static_cast<Cell *>(c)->id);
-  }
 
   for (auto p : b.getCollisions()) {
     Cell *fstCell = dynamic_cast<Cell *>(p.first),
@@ -235,6 +234,27 @@ void Game::step() {
     b.add(c);
   }
   mod.added.clear();
+
+  b.update();
+  for (auto p : players) {
+    Aabb range;
+    bool first = true;
+    for (auto c : p->cells) {
+      if (first)
+        range = c->getAabb();
+      else
+        range = range | c->getAabb();
+      first = false;
+    }
+    if (first)
+      continue;
+    range = range.expand(1000);
+    p->visibleSwap = !p->visibleSwap;
+    std::set<Cell *> &newVisible = p->visibleSwap ? p->visible1 : p->visible0;
+    newVisible.clear();
+    for (auto c : b.getItemsInRange(range))
+      newVisible.insert(static_cast<Cell *>(c));
+  }
 }
 
 void Game::handleInteraction(Cell *fst, Cell *snd) {
