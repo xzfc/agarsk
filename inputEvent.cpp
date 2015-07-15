@@ -56,13 +56,17 @@ struct Spectrate : InputEvent {};
 
 struct Direction : InputEvent {
   double x, y;
-  uint32_t width;
+  uint32_t id;
   Direction(BytesIn &b) {
     x = b.get<double>();
     y = b.get<double>();
-    width = b.get<uint32_t>();
+    id = b.get<uint32_t>();
   }
-  void apply(Game &g) override { player->target = {x, y}; }
+  void apply(Game &g) override {
+    for (auto c : player->cells)
+      if (id == 0 || c->id == id)
+        c->target = {x, y};
+  }
 };
 
 struct Split : InputEvent {

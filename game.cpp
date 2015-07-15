@@ -188,7 +188,7 @@ void Game::step() {
     static const double pw = -std::log(3.) / 5.;
     for (auto c : p->cells)
       c->velocity =
-          (p->target - c->pos).normalize() * 20 * std::pow(c->mass, pw);
+          (c->target - c->pos).normalize() * 20 * std::pow(c->mass, pw);
     p->shoot = false;  // TODO
     if (p->split) {
       std::set<PlayerCell *> oldCells = p->cells;

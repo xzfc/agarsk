@@ -54,6 +54,7 @@ struct Cell : Item {
 struct PlayerCell : Cell {
   Player *player;
   bool exploded = false;
+  Vec2 target;
 
   PlayerCell(Game &, Player *p);
   ~PlayerCell() override;

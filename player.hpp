@@ -10,7 +10,6 @@ struct Player {
 
   unsigned totalMass = 0;
 
-  Vec2 target;
   bool shoot = false;
   bool split = false;
 
