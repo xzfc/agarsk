@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "bullet.hpp"  // Vec2
+#include "geometry.hpp"
 
 struct Player {
   unsigned id;
