@@ -48,7 +48,6 @@ struct Cell : Item {
   virtual ~Cell() {}
   Aabb getAabb() const override;
   Aabb getPotentialAabb() const override;
-  virtual void svg(struct Svg &s) const;
   virtual void step(Modifications &m);
 };
 
@@ -75,22 +74,25 @@ struct FoodCell : Cell {
 };
 
 struct Game {
-  Broadphase b;
   Aabb size;
-  CellId cellId;
   std::set<Player *> players;
-  std::set<Cell *> cells;
-  std::set<Cell *> inactiveCells;
-  unsigned cellCountByType[Cell::Type::size] = {0};
   Modifications mod;
   Top top;
-  std::random_device rd;
 
   Game();
-  Vec2 randomPoint() const;
   void joinPlayer(Player *player);
   void step();
-  void handleInteraction(Cell *fst, Cell *snd);
   void stop();
-  void svg(const char *fname);
+ protected:
+  Broadphase b;
+  CellId cellId;
+  std::random_device rd;
+  std::set<Cell *> cells;
+  std::set<Cell *> inactiveCells;
+  
+  Vec2 randomPoint() const;
+  unsigned cellCountByType[Cell::Type::size] = {0};
+  void handleInteraction(Cell *fst, Cell *snd);
+
+  friend class Cell;
 };

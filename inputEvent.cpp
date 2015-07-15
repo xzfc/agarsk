@@ -98,7 +98,6 @@ void Connect::apply(Game &game) {
 
   player->connection->send(b.fieldSize());
   player->connection->send(b.reset());
-  player->connection->send(b.fullWorld());
   player->connection->send(b.top());
 }
 

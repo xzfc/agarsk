@@ -63,21 +63,6 @@ const std::vector<char> &OutputEventBuffer::ownsBlob(uint32_t newCell) {
   return out;
 }
 
-const std::vector<char> &OutputEventBuffer::fullWorld() {
-  Helper b(out, 16);
-  return out;
-
-  b.scalar<uint16_t>(0);
-
-  for (auto &c : game.cells)
-    b.cell(c);
-  b.scalar<uint32_t>(0);
-
-  b.scalar<uint32_t>(0);
-
-  return out;
-};
-
 const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
   Helper b(out, 16);
 

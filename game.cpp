@@ -1,7 +1,5 @@
 #include "game.hpp"
 
-#include "svg.hpp"
-
 static uint32_t randomColor(std::random_device &rd) {
   constexpr uint8_t a = 7, b = 255;
   auto yoba = std::uniform_int_distribution<uint32_t>(0, 6 * (b - a + 1))(rd);
@@ -56,10 +54,6 @@ Aabb Cell::getAabb() const {
 
 Aabb Cell::getPotentialAabb() const {
   return (type == Type::PELLET || type == Type::FOOD) ? getAabb() : getAabb().expand(3);
-}
-
-void Cell::svg(Svg &s) const {
-  s.circle(pos.x, pos.y, r, "none", "rgba(255,0,  0,  0.3)");
 }
 
 void Cell::step(Modifications &) {
@@ -129,14 +123,6 @@ Virus::Virus(Game &game) : Cell(game) {
   active = false;
 }
 
-Game::Game()
-    : size {-5000, -5000, 5000, 5000}
-    , cellId {1}
-    , cellCountByType {0}
-{
-  
-}
-
 Pellet::Pellet(Game &game) : Cell(game) {
   type = Type::PELLET;
   active = false;
@@ -145,6 +131,14 @@ Pellet::Pellet(Game &game) : Cell(game) {
 FoodCell::FoodCell(Game &game) : Cell(game) {
   type = Type::FOOD;
   active = false;
+}
+
+Game::Game()
+    : size {-5000, -5000, 5000, 5000}
+    , cellId {1}
+    , cellCountByType {0}
+{
+  
 }
 
 Vec2 Game::randomPoint() const {
@@ -322,10 +316,4 @@ void Game::stop() {
     delete p;
   */
   players.clear();
-}
-
-void Game::svg(const char *fname) {
-  Svg svg(fname, {-100, -100, 1000, 1000}, 512, 512);
-  for (Cell *c : cells)
-    c->svg(svg);
 }
