@@ -48,7 +48,7 @@ struct Cell : Item {
   virtual ~Cell() {}
   Aabb getAabb() const override;
   Aabb getPotentialAabb() const override;
-  virtual void step(Modifications &m);
+  virtual void step();
 };
 
 struct PlayerCell : Cell {
@@ -58,7 +58,8 @@ struct PlayerCell : Cell {
   PlayerCell(Game &, Player *p);
   ~PlayerCell() override;
   void setMass(unsigned) override;
-  void step(Modifications &m) override;
+  void step() override;
+  PlayerCell *split(Vec2 impulse);
 };
 
 struct Virus : Cell {

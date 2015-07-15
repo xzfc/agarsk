@@ -56,7 +56,7 @@ Aabb Cell::getPotentialAabb() const {
   return (type == Type::PELLET || type == Type::FOOD) ? getAabb() : getAabb().expand(3);
 }
 
-void Cell::step(Modifications &) {
+void Cell::step() {
   eaten = updated = false;
   newMass = mass;
   if (velocity != Vec2{0, 0}) {
@@ -88,8 +88,18 @@ void PlayerCell::setMass(unsigned mass) {
   Cell::setMass(mass);
 }
 
-void PlayerCell::step(Modifications &m) {
-  Cell::step(m);
+PlayerCell *PlayerCell::split(Vec2 impulse) {
+  auto newCell = new PlayerCell(game, player);
+  newCell->pos.x = pos.x + 0.1 * (drand48() - 0.5);
+  newCell->pos.y = pos.y + 0.1 * (drand48() - 0.5);
+  newCell->color = color;
+  newCell->setMass(mass / 2);
+  setMass(mass - newCell->mass);
+  return newCell;
+}
+
+void PlayerCell::step() {
+  Cell::step();
   if (exploded && player) {
     std::vector<PlayerCell *> cells;
     cells.push_back(this);
@@ -104,13 +114,7 @@ void PlayerCell::step(Modifications &m) {
       if (!smallest)
         break;
 
-      auto newCell = new PlayerCell(game, player);
-      newCell->pos.x = smallest->pos.x + 0.1 * (drand48() - 0.5);
-      newCell->pos.y = smallest->pos.y + 0.1 * (drand48() - 0.5);
-      newCell->color = smallest->color;
-      newCell->setMass(smallest->mass / 2);
-      smallest->setMass(smallest->mass - newCell->mass);
-      cells.push_back(newCell);
+      cells.push_back(smallest->split({0, 0}));
     }
     exploded = false;
   }
@@ -177,7 +181,7 @@ void Game::step() {
   mod.updated.clear();
 
   for (auto c : cells)
-    c->step(mod);
+    c->step();
 
   top.reset();
   for (auto p : players) {
@@ -186,7 +190,16 @@ void Game::step() {
       c->velocity =
           (p->target - c->pos).normalize() * 20 * std::pow(c->mass, pw);
     p->shoot = false;  // TODO
-    p->split = false;  // TODO
+    if (p->split) {
+      std::set<PlayerCell *> oldCells = p->cells;
+      for (auto c : oldCells) {
+        if (p->cells.size() >= 16)
+          break;
+        if (c->mass >= 36.0)
+          c->split({0, 0});
+      }
+      p->split = false;
+    }
     top.add(p);
   }
 
