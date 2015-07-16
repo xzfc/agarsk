@@ -29,7 +29,7 @@ struct BytesIn {
     return result;
   }
 
-  std::u16string getU16String(bool nullTerminated) {
+  std::u16string getU16String(bool nullTerminated, size_t maxlen) {
     std::u16string res;
     for (;;) {
       if (len == pos && !nullTerminated)
@@ -37,14 +37,15 @@ struct BytesIn {
       auto c = get<uint16_t>();
       if (!c && nullTerminated)
         return res;
-      res += c;
+      if (res.length() < maxlen)
+        res += c;
     }
   }
 };
 
 struct Spawn : InputEvent {
   std::u16string name;
-  Spawn(BytesIn &b) { name = b.getU16String(false); }
+  Spawn(BytesIn &b) { name = b.getU16String(false, 15); }
 
   void apply(Game &g) override {
     player->name = name;   // TODO: change only on death
