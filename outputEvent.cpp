@@ -109,3 +109,21 @@ const std::vector<char> &OutputEventBuffer::top() {
 
   return out;
 }
+
+const std::vector<char> &OutputEventBuffer::version() {
+  Helper b(out, 49);
+  const char16_t *text[] = {
+    u"Agarsk v0.0",
+    u" ",
+    u"http://github.com",
+    u"/xzfc/agarsk/",
+  };
+
+  b.scalar<uint32_t>(sizeof text / sizeof text[0]);
+  for (auto t : text) {
+    b.scalar<uint32_t>(0);
+    b.string(t);
+  }
+
+  return out;
+}

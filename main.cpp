@@ -65,8 +65,10 @@ int main() {
         player->connection->send(b.ownsBlob(newCell));
       player->newCells.clear();
 
-      if (ticker.iteration % 32 == 0)
+      if (!--player->topSendCounter) {
+        player->topSendCounter = 24;
         player->connection->send(b.top());
+      }
     }
   }
 }

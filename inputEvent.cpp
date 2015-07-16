@@ -107,9 +107,11 @@ struct Error : InputEvent {};
 void Connect::apply(Game &game) {
   game.players.insert(player);
   OutputEventBuffer b(game);
+  player->topSendCounter = 24*4;
 
   player->connection->send(b.fieldSize());
   player->connection->send(b.reset());
+  player->connection->send(b.version());
 }
 
 void Disconnect::apply(Game &game) {

@@ -23,6 +23,7 @@ struct Player {
   // and visible1 is swapped.
   bool visibleSwap = false;
   std::set<struct Cell *> visible0, visible1;
+  unsigned topSendCounter = 0;
 
   struct IWsConnection *connection;
 };
