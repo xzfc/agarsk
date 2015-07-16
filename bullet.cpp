@@ -85,8 +85,8 @@ void Broadphase::update() {
 
   invalidNodes.clear();
   activeRoot->iterate([this](Node *node) {
-      if (node->isLeaf() && !node->aabb.contains(node->item->getAabb()))
-        this->invalidNodes.push_back(node);
+    if (node->isLeaf() && !node->aabb.contains(node->item->getAabb()))
+      this->invalidNodes.push_back(node);
   });
 
   for (Node *node : invalidNodes) {
@@ -183,7 +183,8 @@ void Broadphase::addNode(Node *node, Node *&parent) {
 
   double volumeDiff[2];
   for (int i = 0; i < 2; i++)
-    volumeDiff[i] = (parent->child[i]->aabb | node->aabb).volume() - parent->child[i]->aabb.volume();
+    volumeDiff[i] = (parent->child[i]->aabb | node->aabb).volume() -
+                    parent->child[i]->aabb.volume();
   // volumeDiff[i] = ((parent->child[i]->aabb | node->aabb) &
   //   parent->child[1-i]->aabb).volume();
 
@@ -216,7 +217,7 @@ void Broadphase::removeNode(Node *node) {
   }
   Node *&parentRef =
       node->parent->parent
-      ->child[node->parent != node->parent->parent->child[0]];
+          ->child[node->parent != node->parent->parent->child[0]];
   node->getSibling()->parent = node->parent->parent;
   parentRef = node->getSibling();
   delete node->parent;

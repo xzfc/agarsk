@@ -53,7 +53,8 @@ Aabb Cell::getAabb() const {
 }
 
 Aabb Cell::getPotentialAabb() const {
-  return (type == Type::PELLET || type == Type::FOOD) ? getAabb() : getAabb().expand(3);
+  return (type == Type::PELLET || type == Type::FOOD) ? getAabb()
+                                                      : getAabb().expand(3);
 }
 
 void Cell::step() {
@@ -120,7 +121,7 @@ void PlayerCell::step() {
   }
 
   if (player && player->split && player->cells.size() < 16 && mass >= 36.0)
-    split( (target-pos).normalize() * 80 );
+    split((target - pos).normalize() * 80);
 
   if (exploded && player) {
     std::vector<PlayerCell *> cells;
@@ -159,13 +160,7 @@ FoodCell::FoodCell(Game &game) : Cell(game) {
   active = false;
 }
 
-Game::Game()
-    : size {-5000, -5000, 5000, 5000}
-    , cellId {1}
-    , cellCountByType {0}
-{
-  
-}
+Game::Game() : size{-5000, -5000, 5000, 5000}, cellId{1}, cellCountByType{0} {}
 
 Vec2 Game::randomPoint() const {
   return {drand48() * (size.x1 - size.x0) + size.x0,
@@ -235,7 +230,7 @@ void Game::step() {
       for (auto p : players) {
         p->visible0.erase(c);
         p->visible1.erase(c);
-      } 
+      }
       delete c;
       continue;
     }

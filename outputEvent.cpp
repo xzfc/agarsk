@@ -72,9 +72,10 @@ const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
     b.scalar<uint32_t>(e.second);
   }
 
-  const std::set<Cell *>
-      &visibleOld = p->visibleSwap ? p->visible0 : p->visible1,
-      &visibleNew = p->visibleSwap ? p->visible1 : p->visible0;
+  const std::set<Cell *> &visibleOld =
+                             p->visibleSwap ? p->visible0 : p->visible1,
+                         &visibleNew =
+                             p->visibleSwap ? p->visible1 : p->visible0;
 
   for (auto c : visibleNew)
     if (c->updated || !visibleOld.count(c))
@@ -83,8 +84,8 @@ const std::vector<char> &OutputEventBuffer::modifyWorld(const Player *p) {
   b.scalar<uint32_t>(0);
 
   std::vector<Cell *> visibleRemoved;
-  std::set_difference(visibleOld.begin(), visibleOld.end(),
-                      visibleNew.begin(), visibleNew.end(),
+  std::set_difference(visibleOld.begin(), visibleOld.end(), visibleNew.begin(),
+                      visibleNew.end(),
                       std::inserter(visibleRemoved, visibleRemoved.begin()));
   b.scalar<uint32_t>(visibleRemoved.size());
   for (auto c : visibleRemoved)

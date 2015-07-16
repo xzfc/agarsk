@@ -73,9 +73,7 @@ struct Direction : InputEvent {
 };
 
 struct Split : InputEvent {
-  void apply(Game &g) override {
-    player->split = true;
-  }
+  void apply(Game &g) override { player->split = true; }
 };
 
 struct Eject : InputEvent {};

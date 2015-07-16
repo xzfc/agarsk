@@ -60,10 +60,12 @@ struct Aabb {
   //! Intersect: `a & b` is maximal Aabb that contained inside both `a` and `b`.
   //! If there are no such Aabb, then Aabb with zero volume returned.
   Aabb operator&(const Aabb &o) const {
-    Aabb r {std::max(x0, o.x0), std::max(y0, o.y0),
-            std::min(x1, o.x1), std::min(y1, o.y1)};
-    if (r.x0 >= r.x1) r.x1 = r.x0;
-    if (r.y0 >= r.y1) r.y1 = r.y0;
+    Aabb r{std::max(x0, o.x0), std::max(y0, o.y0), std::min(x1, o.x1),
+           std::min(y1, o.y1)};
+    if (r.x0 >= r.x1)
+      r.x1 = r.x0;
+    if (r.y0 >= r.y1)
+      r.y1 = r.y0;
     return r;
   }
 

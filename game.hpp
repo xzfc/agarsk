@@ -86,13 +86,14 @@ struct Game {
   void joinPlayer(Player *player);
   void step();
   void stop();
+
  protected:
   Broadphase b;
   CellId cellId;
   std::random_device rd;
   std::set<Cell *> cells;
   std::set<Cell *> inactiveCells;
-  
+
   Vec2 randomPoint() const;
   unsigned cellCountByType[Cell::Type::size] = {0};
   void handleInteraction(Cell *fst, Cell *snd);
