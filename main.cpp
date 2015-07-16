@@ -32,11 +32,9 @@ bool Ticker::tick() {
     iteration++;
   } else {
     auto fromStart = clock_t::now() - start;
-    if (fromStart / period < iteration - 1) {
-      iteration++;
-      return true;
-    }
     auto nextIterTime = (iteration++) * period;
+    if (nextIterTime < fromStart)
+      return true;
     std::this_thread::sleep_for(nextIterTime - fromStart);
   }
   return false;
@@ -50,17 +48,15 @@ int main() {
   OutputEventBuffer b(game);
   Ticker ticker(25);
   for (;;) {
-    ticker.tick();
+    if (ticker.tick())
+      std::cout << "Server slowdown\n";
     {
       auto input = ws->getInput();
       for (auto& event : *input)
         event->apply(game);
     }
 
-    auto t0 = std::chrono::steady_clock::now();
     game.step();
-    auto t1 = std::chrono::steady_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::duration<double>>(t1-t0).count() << "\n";
 
     for (auto player : game.players) {
       player->connection->send(b.modifyWorld(player));
