@@ -87,8 +87,11 @@ struct Explode : InputEvent {};
 struct Q : InputEvent {};
 
 struct Token : InputEvent {
-  std::string token;
   Token(BytesIn &b) { b.pos = b.len; /* just ignore rest bytes */ }
+};
+
+struct FbToken : InputEvent {
+  FbToken(BytesIn &b) { b.pos = b.len; /* just ignore rest bytes */ }
 };
 
 struct Hello254 : InputEvent {
@@ -109,7 +112,6 @@ void Connect::apply(Game &game) {
 
   player->connection->send(b.fieldSize());
   player->connection->send(b.reset());
-  player->connection->send(b.top());
 }
 
 void Disconnect::apply(Game &game) {
@@ -121,9 +123,7 @@ void Disconnect::apply(Game &game) {
 }
 
 static InputEvent *parse_(BytesIn &b) {
-  auto x = b.getByte();
-  // std::cout << "Input event " << (unsigned)x << "\n";
-  switch (x) {
+  switch (b.getByte()) {
     case 0: return new Spawn(b);
     case 1: return new Spectrate;
     case 16: return new Direction(b);
@@ -133,6 +133,7 @@ static InputEvent *parse_(BytesIn &b) {
     case 20: return new Explode;
     case 21: return new Q;
     case 80: return new Token(b);
+    case 81: return new FbToken(b);
     case 254: return new Hello254(b);
     case 255: return new Hello255(b);
   }
@@ -141,18 +142,12 @@ static InputEvent *parse_(BytesIn &b) {
 
 InputEvent *InputEvent::parse(const char *data, size_t len) {
   BytesIn b{data, len, 0};
-  /*
-  std::cout << "Input event:";
-  for (size_t i = 0; i < len; i++) std::cout << ' ' << (unsigned)(unsigned
-  char)data[i];
-  std::cout << "\n";*/
-
   InputEvent *ie = 0;
   try {
     ie = parse_(b);
   } catch (int x) {
     std::cout << "Input event error 1\n";
-  };
+  }
   if (!ie || b.len != b.pos) {
     delete ie;
     std::cout << "Input event error 2\n";

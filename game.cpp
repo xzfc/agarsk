@@ -232,6 +232,10 @@ void Game::step() {
         cells.erase(c);
       else
         inactiveCells.erase(c);
+      for (auto p : players) {
+        p->visible0.erase(c);
+        p->visible1.erase(c);
+      } 
       delete c;
       continue;
     }
@@ -251,7 +255,6 @@ void Game::step() {
   }
   mod.added.clear();
 
-  b.update();
   for (auto p : players) {
     Aabb range;
     bool first = true;
