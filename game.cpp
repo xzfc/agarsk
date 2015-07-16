@@ -160,7 +160,7 @@ FoodCell::FoodCell(Game &game) : Cell(game) {
   active = false;
 }
 
-Game::Game() : size{-5000, -5000, 5000, 5000}, cellId{1}, cellCountByType{0} {}
+Game::Game() : size{-2000, -2000, 2000, 2000}, cellId{1}, cellCountByType{0} {}
 
 Vec2 Game::randomPoint() const {
   return {drand48() * (size.x1 - size.x0) + size.x0,
@@ -175,20 +175,20 @@ void Game::joinPlayer(Player *player) {
   for (auto i = 0; i < 1; i++) {
     auto cell = new PlayerCell(*this, player);
     cell->pos = randomPoint();
-    cell->setMass(200);
+    cell->setMass(10);
   }
   players.insert(player);
 }
 
 void Game::step() {
-  unsigned needPellets = size.volume() / 5000;
+  unsigned needPellets = size.volume() / 50000;
   for (unsigned i = cellCountByType[Cell::PELLET]; i < needPellets; i++) {
     auto cell = new Pellet(*this);
     cell->pos = randomPoint();
     cell->setMass(1);
   }
 
-  unsigned needViruses = size.volume() / 5000000;
+  unsigned needViruses = size.volume() / 1000000;
   for (unsigned i = cellCountByType[Cell::VIRUS]; i < needViruses; i++) {
     auto cell = new Virus(*this);
     cell->pos = randomPoint();

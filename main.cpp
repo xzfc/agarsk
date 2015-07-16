@@ -41,7 +41,7 @@ bool Ticker::tick() {
 }
 
 int main() {
-  std::unique_ptr<IWsServer> ws(wsServer(8000));
+  std::unique_ptr<IWsServer> ws(wsServer(4947));
   Game game;
   ws->run();
   std::cout << "Game started!\n";
