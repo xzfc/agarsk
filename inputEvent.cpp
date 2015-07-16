@@ -64,8 +64,10 @@ struct Direction : InputEvent {
   }
   void apply(Game &g) override {
     for (auto c : player->cells)
-      if (id == 0 || c->id == id)
+      if (id == 0 || c->id == id) {
         c->target = {x, y};
+        c->targetEnabled = true;
+      }
   }
 };
 

@@ -59,10 +59,14 @@ Aabb Cell::getPotentialAabb() const {
 void Cell::step() {
   eaten = updated = false;
   newMass = mass;
-  if (velocity != Vec2{0, 0}) {
+  if (velocity != Vec2{0., 0.}) {
     pos += velocity;
     velocity *= 0.9;  // TODO: set zero if small
     updated = true;
+  }
+  if (collideVelocity != Vec2{0., 0.}) {
+    pos += collideVelocity;
+    collideVelocity = {0., 0.};
   }
 }
 
@@ -93,6 +97,7 @@ PlayerCell *PlayerCell::split(Vec2 impulse) {
   newCell->pos.x = pos.x + 0.1 * (drand48() - 0.5);
   newCell->pos.y = pos.y + 0.1 * (drand48() - 0.5);
   newCell->color = color;
+  newCell->velocity = impulse;
   newCell->setMass(mass / 2);
   setMass(mass - newCell->mass);
   return newCell;
@@ -100,6 +105,23 @@ PlayerCell *PlayerCell::split(Vec2 impulse) {
 
 void PlayerCell::step() {
   Cell::step();
+
+  if (targetEnabled) {
+    static const double pw = -std::log(3.) / 5.;
+    double maxSpeed = 20 * std::pow(mass, pw);
+    if ((target - pos).length() > maxSpeed) {
+      pos += (target - pos).normalize() * 20 * std::pow(mass, pw);
+      updated = true;
+    } else {
+      if (pos != target)
+        updated = true;
+      pos = target;
+    }
+  }
+
+  if (player && player->split && player->cells.size() < 16 && mass >= 36.0)
+    split( (target-pos).normalize() * 80 );
+
   if (exploded && player) {
     std::vector<PlayerCell *> cells;
     cells.push_back(this);
@@ -158,7 +180,7 @@ void Game::joinPlayer(Player *player) {
   for (auto i = 0; i < 1; i++) {
     auto cell = new PlayerCell(*this, player);
     cell->pos = randomPoint();
-    cell->setMass(10);
+    cell->setMass(200);
   }
   players.insert(player);
 }
@@ -185,21 +207,8 @@ void Game::step() {
 
   top.reset();
   for (auto p : players) {
-    static const double pw = -std::log(3.) / 5.;
-    for (auto c : p->cells)
-      c->velocity =
-          (c->target - c->pos).normalize() * 20 * std::pow(c->mass, pw);
     p->shoot = false;  // TODO
-    if (p->split) {
-      std::set<PlayerCell *> oldCells = p->cells;
-      for (auto c : oldCells) {
-        if (p->cells.size() >= 16)
-          break;
-        if (c->mass >= 36.0)
-          c->split({0, 0});
-      }
-      p->split = false;
-    }
+    p->split = false;
     top.add(p);
   }
 
@@ -286,8 +295,6 @@ void Game::handleInteraction(Cell *fst, Cell *snd) {
         actionEat = true;
     } else if (snd->type == Cell::Type::FOOD && canEatD) {
       actionEat = true;
-      // if (fst->mass() > 20)
-      //  actionExplode = true;
     } else if (canEatD && canEatR) {
       actionEat = true;
       if (snd->type == Cell::Type::VIRUS)
@@ -309,9 +316,9 @@ void Game::handleInteraction(Cell *fst, Cell *snd) {
 
   if (actionCollide) {
     auto diff = (fst->pos - snd->pos);
-    auto vec = diff.normalize() * (-diff.length() + fst->r + snd->r) * 0.1;
-    fst->velocity += vec;
-    snd->velocity -= vec;
+    auto vec = diff.normalize() * (-diff.length() + fst->r + snd->r) * 0.4;
+    fst->collideVelocity += vec;
+    snd->collideVelocity -= vec;
   }
 
   if (fstP && actionExplode && !fst->eaten)

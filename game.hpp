@@ -37,7 +37,7 @@ struct Cell : Item {
   unsigned mass;
   double r;
   // Dynamic parameters (other)
-  Vec2 pos, velocity;
+  Vec2 pos, velocity, collideVelocity;
 
   // State changes flags
   bool updated = false;
@@ -55,6 +55,7 @@ struct PlayerCell : Cell {
   Player *player;
   bool exploded = false;
   Vec2 target;
+  bool targetEnabled = false;
 
   PlayerCell(Game &, Player *p);
   ~PlayerCell() override;
