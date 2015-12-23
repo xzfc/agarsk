@@ -59,8 +59,8 @@ struct Direction : InputEvent {
   double x, y;
   uint32_t id;
   Direction(BytesIn &b) {
-    x = b.get<double>();
-    y = b.get<double>();
+    x = b.get<int32_t>();
+    y = b.get<int32_t>();
     id = b.get<uint32_t>();
   }
   void apply(Game &g) override {
